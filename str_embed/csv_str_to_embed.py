@@ -6,7 +6,7 @@ from openai.embeddings_utils import get_embedding
 from sklearn.preprocessing import LabelEncoder
 label_encoder = LabelEncoder()
 
-openai.api_key = "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"
+openai.api_key = "your-openai-key"
 embedding_model = "text-embedding-ada-002"
 embedding_encoding = "cl100k_base"  
 max_tokens = 8000  
