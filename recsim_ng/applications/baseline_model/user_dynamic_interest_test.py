@@ -55,7 +55,7 @@ class BaselineInterestEvolutionUserTest(tf.test.TestCase):
                 # The no click probability set to -np.Inf for all users.
                 # Users will click on the only document presented to them.
                 'choice': [0],
-                'consumed_time': [0.5],
+                # 'consumed_time': [0.5],
             },
             response)
 if __name__ == '__main__':
