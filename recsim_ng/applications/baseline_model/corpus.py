@@ -33,14 +33,14 @@ Space = field_spec.Space
 class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
   """Defines a corpus wiht static topics and embeddings."""
   def __init__(self,
-               config, data_path, col_name_topic, col_name_embed):
+               config):
 
     super().__init__(config)
-    self._data_path = data_path
+    self._data_path = './str_embed/data/embeddings.csv'
+    self._col_name_embed = 'embedding'
+    self._col_name_topic = 'category_encoded'
     self._num_users = config['num_users']
     self._doc_embed_dim = config['doc_embed_dim']
-    self._col_name_topic = col_name_topic
-    self._col_name_embed = col_name_embed
   
   def initial_state(self):
     df = pd.read_csv(self._data_path)
@@ -65,32 +65,28 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
     )
 
   def next_state(self, previous_state, user_response, slate_docs):
-    new_doc_recommend_times = []
+    # Prepare items that needed to be add on 1
+    add_doc_recommend_times = np.zeros((self._num_users, self._num_docs))
     doc_id_recommend = slate_docs.get("doc_id") # user, slate_size
-    
-    chosen_idx = list(user_response.get("choice"))
+    for user_idx, per_user in enumerate(add_doc_recommend_times):
+        docs_recommended = doc_id_recommend[user_idx]
+        for i in tf.range(docs_recommended.shape[0]):
+            doc_idx = docs_recommended[i]
+            # TODO: error here when running baseline_model_contextual.py, since we cannot convert tensor to numpy in tensor graph
+            per_user[doc_idx-1] = 1.
+    add_doc_recommend_times = tf.convert_to_tensor(add_doc_recommend_times, dtype=tf.float32)
+    new_doc_recommend_times = tf.add(previous_state.get("doc_recommend_times"), add_doc_recommend_times)
+
+    add_doc_click_times = np.zeros((self._num_users, self._num_docs))
+    chosen_idx = user_response.get("choice")
     doc_id_click = [] # user, 1
-    for user_idx, user_choice in enumerate(chosen_idx):
-      doc_id_click.append(doc_id_recommend[user_idx][user_choice])
-
-    new_doc_click_times = []
-    for user_idx, doc_id in enumerate(doc_id_recommend):
-      each_user = []
-      for doc_index, times in enumerate(previous_state.get("doc_recommend_times")[user_idx]):
-        if (doc_index in doc_id-1):
-          each_user.append(times+1)
-        else: each_user.append(times)
-      new_doc_recommend_times.append(each_user)
-    new_doc_recommend_times = tf.convert_to_tensor(new_doc_recommend_times)
-
-    for user_idx, doc_id in enumerate(doc_id_click):
-      each_user = []
-      for doc_index, times in enumerate(previous_state.get("doc_click_times")[user_idx]):
-        if (doc_index == doc_id-1):
-          each_user.append(times+1)
-        else: each_user.append(times)
-      new_doc_click_times.append(each_user)
-    new_doc_click_times = tf.convert_to_tensor(new_doc_click_times)
+    for user_idx in tf.range(chosen_idx.shape[0]):
+      doc_id_click.append(doc_id_recommend[user_idx][chosen_idx[user_idx]])
+    for user_idx, per_user in enumerate(add_doc_click_times):
+      docs_clicked = doc_id_click[user_idx]
+      per_user[docs_clicked-1] = 1.
+    add_doc_click_times = tf.convert_to_tensor(add_doc_click_times, dtype=tf.float32)
+    new_doc_click_times = tf.add(previous_state.get("doc_click_times"), add_doc_click_times)
 
     return Value(
         # doc_id=0 is reserved for "null" doc.
@@ -111,11 +107,11 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
         doc_id=Space(
             spaces.Box(
                 low=np.zeros(self._num_docs),
-                high=np.ones(self._num_docs) * self._num_docs, dtype=tf.int32)),
+                high=np.ones(self._num_docs) * self._num_docs, dtype=np.int32)),
         doc_topic=Space(
             spaces.Box(
                 low=np.zeros(self._num_docs),
-                high=np.ones(self._num_docs) * self._num_topics, dtype=tf.int32)),
+                high=np.ones(self._num_docs) * self._num_topics, dtype=np.int32)),
         doc_quality=Space(
             spaces.Box(
                 low=np.ones(self._num_docs) * -np.Inf,
@@ -128,11 +124,11 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
         doc_recommend_times=Space(
             spaces.Box(
                 low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)), 
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
         doc_click_times=Space(
             spaces.Box(
                 low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)),)
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
     return state_spec.prefixed_with("state").union(
         state_spec.prefixed_with("available_docs"))
 

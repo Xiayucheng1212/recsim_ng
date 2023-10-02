@@ -24,7 +24,7 @@ class StaticCorpusTest(tf.test.TestCase):
         'num_users': self._num_users,
         'doc_embed_dim': self._doc_embed_dim
     }
-    self._corpus = static_corpus.CorpusWithEmbeddingsAndTopics(self._config, self._data_path, 'category_encoded', 'embedding')
+    self._corpus = static_corpus.CorpusWithEmbeddingsAndTopics(self._config)
 
   def test_init_state(self):
       init_state = self._corpus.initial_state()
@@ -64,7 +64,8 @@ class StaticCorpusTest(tf.test.TestCase):
     expected[1][0:2] = [1,1]
     expected[2][2:4] = [1,1]
     expected = tf.convert_to_tensor(expected)
-    # print(actual.get('doc_click_times'))
+    print(actual.get('doc_click_times'))
+    print(actual.get('doc_recommend_times'))
     # self.assertEqual(actual, expected)
 
   def test_available_documents(self):

@@ -109,11 +109,12 @@ class InterestEvolutionUser(user.User):
     direction = tf.expand_dims(
         chosen_doc_features.get('doc_quality'), axis=-1) * (
             doc_features - user_interests)
+    # TODO: need to remove consumed time, consider other indicators
     linear_update = self._interest_model.next_state(
         previous_state.get('interest'),
         Value(
             input=direction,
-            condition=tf.less(user_response.get('consumed_time'), 0.)))
+            condition=tf.less(tf.random.uniform([self._num_users], minval=-1.0, maxval=1.0), 0.)))
     # We squash the interest vector to avoid infinite blow-up using the function
     # 4 * M * (sigmoid(X/M) - 0.5) which is roughly linear around the origin and
     # softly saturates at +/-2M. These constants are not intended to be tunable.
@@ -133,16 +134,16 @@ class InterestEvolutionUser(user.User):
         previous_state.get('interest.state'),
         slate_docs.get('doc_features')).get('affinities')
     choice = self._choice_model.choice(affinities + 2.0)  # pytype: disable=attribute-error  # trace-all-classes
-    chosen_doc_idx = choice.get('choice')
+    # chosen_doc_idx = choice.get('choice')
     # Calculate consumption time. Negative quality documents generate more
     # engagement but ultimately lead to negative interest evolution.
-    doc_quality = slate_docs.get('doc_quality')
-    consumed_fraction = tf.sigmoid(-doc_quality)
-    doc_length = slate_docs.get('doc_length')
-    consumed_time = consumed_fraction * doc_length
-    chosen_doc_responses = selector_lib.get_chosen(
-        Value(consumed_time=consumed_time), chosen_doc_idx)
-    return chosen_doc_responses.union(choice)
+    # doc_quality = slate_docs.get('doc_quality')
+    # consumed_fraction = tf.sigmoid(-doc_quality)
+    # doc_length = slate_docs.get('doc_length')
+    # consumed_time = consumed_fraction * doc_length
+    # chosen_doc_responses = selector_lib.get_chosen(
+    #     Value(consumed_time=consumed_time), chosen_doc_idx)
+    return choice
 
   def specs(self):
     interest_spec = ValueSpec(
@@ -151,10 +152,8 @@ class InterestEvolutionUser(user.User):
                 self._num_users, self._doc_embed_dim))).union(
                     self._interest_model.specs().prefixed_with('linear_update'))
     state_spec = interest_spec.prefixed_with('interest')
-    response_spec = ValueSpec(
-        consumed_time=tensor_space(
-            low=0.0, high=np.Inf, shape=(self._num_users,))).union(
-                self._choice_model.specs())  # pytype: disable=attribute-error  # trace-all-classes
+    # Notice: no more consumed time
+    response_spec = self._choice_model.specs()  # pytype: disable=attribute-error  # trace-all-classes
     observation_spec = ValueSpec()
     return state_spec.prefixed_with('state').union(
         observation_spec.prefixed_with('observation')).union(

@@ -155,10 +155,10 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
         doc_recommend_times=Space(
             spaces.Box(
                 low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)), 
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
         doc_click_times=Space(
             spaces.Box(
                 low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)),)
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
     return state_spec.prefixed_with("state").union(
         slate_docs_spec.prefixed_with("slate"))

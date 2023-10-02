@@ -20,7 +20,7 @@ def run_simulation(num_runs, num_users, horizon, epsilon):
     """
     sum_user_ctime = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_one_user_glm_simulation_network(epsilon= epsilon, num_users=num_users)
+        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
