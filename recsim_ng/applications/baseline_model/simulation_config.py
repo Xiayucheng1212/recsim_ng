@@ -43,7 +43,6 @@ def create_one_user_glm_simulation_network(
     freeze_corpus = True
 ):
     """Retuns a network for the glm-based recommender simulation with viable corpus."""
-    #TODO: The num_docs should be based on the input dataset after CLIP/BERT embedding.
     num_docs = 100
     config = {
         'epsilon': epsilon,
