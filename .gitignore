@@ -1,0 +1,4 @@
+*.pyc
+__pycache__/*
+recsim_ng/*.pyc
+recsim_ng/applications/baseline_model/*.pyc

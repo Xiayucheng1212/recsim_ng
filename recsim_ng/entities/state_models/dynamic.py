@@ -636,7 +636,7 @@ class ControlledLinearGaussianStateModel(state.StateModel):
     else:
       scale_linear_op = self._initial_dist_scale_ctor(
           self._static_parameters.get('initial_dist_scale'))
-      output_shape = scale_linear_op.shape_tensor()[:-1]
+      output_shape = np.array(scale_linear_op.shape_tensor()[:-1])
       spec = Space(spaces.Box(-np.Inf, np.Inf, shape=output_shape))
     return ValueSpec(state=spec)
 
