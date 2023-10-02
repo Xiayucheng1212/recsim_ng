@@ -27,6 +27,35 @@ Value = value.Value
 ValueSpec = value.ValueSpec
 Space = field_spec.Space
 
+class ClickThroughRateAsRewardMetrics(metrics.RecsMetricsBase):
+  """A simple implementation of CTR metrics."""
+  def initial_metrics(self):
+    return Value(
+        reward=ed.Deterministic(loc=tf.zeros([self._num_users])),
+        cumulative_reward=ed.Deterministic(loc=tf.zeros([self._num_users])))
+
+  def next_metrics(self, previous_metrics, corpus_state, user_state, user_response, slate_docs):
+    del user_state, user_response,slate_docs
+    doc_recommend_times = corpus_state.get("doc_recommend_times") + 0.0001
+    doc_click_times = corpus_state.get("doc_click_times")
+    reward = tf.reduce_mean(tf.divide(doc_click_times, doc_recommend_times), axis=1)
+    cumulative_reward = previous_metrics.get("cumulative_reward")+reward
+    return Value(
+      reward = reward, cumulative_reward = cumulative_reward
+    )
+    
+  def specs(self):
+    return ValueSpec(
+        reward=Space(
+            spaces.Box(
+                low=np.zeros(self._num_users),
+                high=np.array([np.Inf] * self._num_users))),
+        cumulative_reward=Space(
+            spaces.Box(
+                low=np.zeros(self._num_users),
+                high=np.array([np.Inf] *
+                              self._num_users)))).prefixed_with("state")
+
 
 class ConsumedTimeAsRewardMetrics(metrics.RecsMetricsBase):
   """A minimal implementation of recs metrics."""

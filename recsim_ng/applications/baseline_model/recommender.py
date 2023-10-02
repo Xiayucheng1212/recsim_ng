@@ -56,9 +56,10 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
     super().__init__(config, name=name)
     self._num_docs = config.get("num_docs")
     self._num_topics = config.get("num_topics")
+    self._doc_embed_dim = config.get("doc_embed_dim")
     self._epsilon = float(config.get("epsilon"))
     self._optimizer = keras.optimizers.SGD(0.1)
-    self._model = model_ctor(self._num_docs, self._num_topics, self._num_users)
+    self._model = model_ctor(self._num_docs, self._doc_embed_dim, self._num_users)
     self._train_acc = keras.metrics.BinaryAccuracy()
     self._train_loss = keras.metrics.Mean(name='train_loss')
     # The slate_size here is changed to num_docs, since we need to check all affinities in the available_docs
@@ -70,7 +71,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      self._train_acc.reset_states()
      # Returns the model weights as a user interest
      # Notice: use trainable_weights instead of get_weights(), so that it can run inside the tensorflow graph.
-     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._num_topics]))
+     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim]))
    
    def next_state(self, previous_state, user_response, slate_docs):
      # Prepares training and ground_truth data
@@ -90,7 +91,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             loss = keras.losses.binary_crossentropy(training_y_reshaped, pred)
             grads = tape.gradient(loss, self._model.trainable_variables) 
             self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
-     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._num_topics]))
+     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim]))
 
    def slate_docs(self, previous_state, user_obs,
                  available_docs):
@@ -100,11 +101,11 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      explt_or_explr = random.uniform(0.0, 1.0)
      if explt_or_explr < self._epsilon: # Exploration Stage
         random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
-        slate = available_docs.map(lambda field: tf.gather(field, random_indices))
+        slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
      else: # Exploitation Stage
         # The affinity model used -tf.keras.losses.cosine_similarity to calculate similarity
         # Ranging from (-1, 1), 1 means high similarity and -1 means high dissimilarity. 
-        user_interest = tf.reshape(self._model.trainable_weights[0], [self._num_users, self._num_topics])
+        user_interest = tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim])
         affinities = self._affinity_model.affinities( 
             # user_interest: (num_users, n_features)
             user_interest,
@@ -112,7 +113,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             available_docs.get('doc_features')).get('affinities') + 2.0
         # Choose the top-k highest smilarity docs
         _, doc_indices = tf.math.top_k(affinities, k=self._slate_size)
-        slate = available_docs.map(lambda field: tf.gather(field, doc_indices))
+        slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
      return slate
    
    # Returns the specs of the state and slate documents.
@@ -123,10 +124,10 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
       user_interest=Space(
             spaces.Box(
                 low=np.ones(
-                    (self._num_users, self._num_topics)) *
+                    (self._num_users, self._doc_embed_dim)) *
                 -np.Inf,
                 high=np.ones(
-                    (self._num_users, self._num_topics)) *
+                    (self._num_users, self._doc_embed_dim)) *
                 np.Inf))
     )
     slate_docs_spec = ValueSpec(
@@ -146,14 +147,18 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
         doc_features=Space(
             spaces.Box(
                 low=np.ones(
-                    (self._num_users, self._slate_size, self._num_topics)) *
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
                 -np.Inf,
                 high=np.ones(
-                    (self._num_users, self._slate_size, self._num_topics)) *
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
                 np.Inf)),
-        doc_length=Space(
+        doc_recommend_times=Space(
             spaces.Box(
-                low=np.zeros((self._num_users, self._slate_size)),
-                high=np.ones((self._num_users, self._slate_size)) * np.Inf)))
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)), 
+        doc_click_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=tf.int32)),)
     return state_spec.prefixed_with("state").union(
         slate_docs_spec.prefixed_with("slate"))
