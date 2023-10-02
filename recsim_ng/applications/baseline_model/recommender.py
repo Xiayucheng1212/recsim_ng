@@ -101,7 +101,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      explt_or_explr = random.uniform(0.0, 1.0)
      if explt_or_explr < self._epsilon: # Exploration Stage
         random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
-        slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
+        slate = available_docs.map(lambda field: tf.gather(field, random_indices))
      else: # Exploitation Stage
         # The affinity model used -tf.keras.losses.cosine_similarity to calculate similarity
         # Ranging from (-1, 1), 1 means high similarity and -1 means high dissimilarity. 
@@ -113,7 +113,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             available_docs.get('doc_features')).get('affinities') + 2.0
         # Choose the top-k highest smilarity docs
         _, doc_indices = tf.math.top_k(affinities, k=self._slate_size)
-        slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
+        slate = available_docs.map(lambda field: tf.gather(field, doc_indices))
      return slate
    
    # Returns the specs of the state and slate documents.
@@ -151,14 +151,6 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
                 -np.Inf,
                 high=np.ones(
                     (self._num_users, self._slate_size, self._doc_embed_dim)) *
-                np.Inf)),
-        doc_recommend_times=Space(
-            spaces.Box(
-                low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
-        doc_click_times=Space(
-            spaces.Box(
-                low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
+                np.Inf)))
     return state_spec.prefixed_with("state").union(
         slate_docs_spec.prefixed_with("slate"))

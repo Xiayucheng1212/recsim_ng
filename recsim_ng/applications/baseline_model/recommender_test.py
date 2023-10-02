@@ -80,8 +80,6 @@ class GLMRecommenderTest(tf.test.TestCase):
             doc_features=ed.Deterministic(
                 loc=tf.ones((self._num_docs, self._num_topics)) * 1.0 /
                 self._num_topics),
-            doc_recommend_times = tf.ones([self._num_users, self._config['num_docs']], dtype=tf.int32),
-            doc_click_times = tf.ones([self._num_users, self._config['num_docs']], dtype=tf.int32),
         )
 
         self._recommender = glm_recommender.GeneralizedLinearRecommender(
@@ -89,7 +87,7 @@ class GLMRecommenderTest(tf.test.TestCase):
         slate_docs = self.evaluate(self._recommender.slate_docs({}, {}, available_docs).as_dict)
 
         self.assertCountEqual(
-            ['doc_id', 'doc_topic', 'doc_quality', 'doc_features', 'doc_recommend_times', 'doc_click_times'],
+            ['doc_id', 'doc_topic', 'doc_quality', 'doc_features'],
             slate_docs.keys())
         np.testing.assert_array_equal(
             [self._config['num_users'], self._config['slate_size']],
@@ -104,12 +102,6 @@ class GLMRecommenderTest(tf.test.TestCase):
             self._config['num_users'], self._config['slate_size'],
             self._config['num_topics']
         ], np.shape(slate_docs['doc_features']))
-        np.testing.assert_array_equal(
-            [self._config['num_users'], self._config['num_docs']],
-            np.shape(slate_docs['doc_recommend_times']))
-        np.testing.assert_array_equal(
-            [self._config['num_users'], self._config['num_docs']],
-            np.shape(slate_docs['doc_click_times']))
         
 
 if __name__ == '__main__':

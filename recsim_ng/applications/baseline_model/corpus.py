@@ -50,8 +50,6 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
     doc_quality_var = 0.1
     doc_quality = ed.Normal(
         loc=tf.gather(topic_quality_means, doc_topic), scale=doc_quality_var)
-    doc_recommend_times = tf.zeros([self._num_users, self._num_docs])
-    doc_click_times = tf.zeros([self._num_users, self._num_docs])
 
     return Value(
         # doc_id=0 is reserved for "null" doc.
@@ -59,45 +57,12 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
             loc=tf.range(start=1, limit=self._num_docs + 1, dtype=tf.int32)),
         doc_topic=doc_topic,
         doc_quality=doc_quality,
-        doc_features=doc_features,
-        doc_recommend_times = doc_recommend_times,
-        doc_click_times = doc_click_times
+        doc_features=doc_features
     )
 
   def next_state(self, previous_state, user_response, slate_docs):
-    # Prepare items that needed to be add on 1
-    add_doc_recommend_times = np.zeros((self._num_users, self._num_docs))
-    doc_id_recommend = slate_docs.get("doc_id") # user, slate_size
-    for user_idx, per_user in enumerate(add_doc_recommend_times):
-        docs_recommended = doc_id_recommend[user_idx]
-        for i in tf.range(docs_recommended.shape[0]):
-            doc_idx = docs_recommended[i]
-            # TODO: error here when running baseline_model_contextual.py, since we cannot convert tensor to numpy in tensor graph
-            per_user[doc_idx-1] = 1.
-    add_doc_recommend_times = tf.convert_to_tensor(add_doc_recommend_times, dtype=tf.float32)
-    new_doc_recommend_times = tf.add(previous_state.get("doc_recommend_times"), add_doc_recommend_times)
-
-    add_doc_click_times = np.zeros((self._num_users, self._num_docs))
-    chosen_idx = user_response.get("choice")
-    doc_id_click = [] # user, 1
-    for user_idx in tf.range(chosen_idx.shape[0]):
-      doc_id_click.append(doc_id_recommend[user_idx][chosen_idx[user_idx]])
-    for user_idx, per_user in enumerate(add_doc_click_times):
-      docs_clicked = doc_id_click[user_idx]
-      per_user[docs_clicked-1] = 1.
-    add_doc_click_times = tf.convert_to_tensor(add_doc_click_times, dtype=tf.float32)
-    new_doc_click_times = tf.add(previous_state.get("doc_click_times"), add_doc_click_times)
-
-    return Value(
-        # doc_id=0 is reserved for "null" doc.
-        doc_id=previous_state.get("doc_id"),
-        doc_topic=previous_state.get("doc_topic"),
-        doc_quality=previous_state.get("doc_quality"),
-        doc_features=previous_state.get("doc_features"),
-        doc_recommend_times = new_doc_recommend_times,
-        doc_click_times = new_doc_click_times
-    )
-      
+    del user_response, slate_docs
+    return previous_state.map(tf.identity)
 
   def available_documents(self, corpus_state):
     return corpus_state.map(tf.identity)
@@ -119,16 +84,7 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
         doc_features=Space(
             spaces.Box(
                 low=np.ones((self._num_docs, self._doc_embed_dim)) * np.Inf,
-                high=np.ones((self._num_docs, self._doc_embed_dim)))),
-       #Notice: each user needs a isolated space for their click and recommended history, so the shape is (num_users, num_docs)
-        doc_recommend_times=Space(
-            spaces.Box(
-                low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
-        doc_click_times=Space(
-            spaces.Box(
-                low=np.zeros((self._num_users, self._num_docs)),
-                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
+                high=np.ones((self._num_docs, self._doc_embed_dim)))),)
     return state_spec.prefixed_with("state").union(
         state_spec.prefixed_with("available_docs"))
 
