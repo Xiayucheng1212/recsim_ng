@@ -42,9 +42,6 @@ class StaticCorpusTest(tf.test.TestCase):
           [self._config['num_docs'], self._config['doc_embed_dim']],
           np.shape(doc_features))
   # def test_next_state(self):
-  #   test_int = tf.zeros([1, self._num_docs])
-  #   result = tf.tensor_scatter_nd_update(test_int, indices=[[0,1]], updates=[1.0])
-  #   print(result)
     # init_state = self._corpus.initial_state()
     # init_state_dict = self.evaluate(init_state.as_dict)
     # # Static corpus does not change its state on any user response.
