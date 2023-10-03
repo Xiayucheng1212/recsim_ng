@@ -26,7 +26,41 @@ import tensorflow as tf
 Value = value.Value
 ValueSpec = value.ValueSpec
 Space = field_spec.Space
-
+class SuccessRateMetrics(metrics.RecsMetricsBase):
+    
+    def __init__(self, config, name='CTRMetrics'):
+       super().__init__(config, name)
+       self._slate_size=config['slate_size']
+       
+    def initial_metrics(self):
+      return Value(reward = ed.Deterministic(loc=tf.zeros([self._num_users],dtype=tf.float32)),
+          cumulative_reward=ed.Deterministic(loc=tf.zeros([self._num_users],dtype=tf.float32)))
+      
+    def next_metrics(self,previous_metrics, corpus_state,
+                   user_state, user_response,
+                   slate_doc):
+        
+        chosen_doc_idx = user_response.get("choice")
+        def filter(x):
+            return 1.0 if x!=self._slate_size else 0.0
+        click=tf.map_fn(filter,chosen_doc_idx,dtype=tf.float32)
+        return Value(
+        reward=ed.Deterministic(loc=click),
+        cumulative_reward=ed.Deterministic(
+            loc=previous_metrics.get("cumulative_reward") + click))
+        
+    def specs(self):
+        return ValueSpec(
+            click=Space(
+                spaces.Box(
+                    low=np.zeros(self._num_users),
+                    high=np.array([np.Inf] * self._num_users))),
+            cumulative_click=Space(
+                spaces.Box(
+                    low=np.zeros(self._num_users),
+                    high=np.array([np.Inf] *
+                                self._num_users)))).prefixed_with("state")
+        
 class ClickThroughRateAsRewardMetrics(metrics.RecsMetricsBase):
   """A simple implementation of CTR metrics."""
   def initial_metrics(self):
