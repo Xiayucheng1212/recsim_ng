@@ -17,7 +17,7 @@ def create_glm_contextual_simulation_network(
     num_users=1,
     num_topics = 42,
     doc_embed_dim=1536,
-    slate_size = 3
+    slate_size = 2
 ):
     num_docs = 20
     config = {

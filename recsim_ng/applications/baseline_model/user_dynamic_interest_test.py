@@ -42,8 +42,6 @@ class BaselineInterestEvolutionUserTest(tf.test.TestCase):
             doc_quality=ed.Deterministic(
                 loc=tf.constant([[0.]])),
             doc_features=ed.Deterministic(loc=tf.constant(doc_features)),
-            doc_length=ed.Deterministic(
-                loc=tf.constant([[1.]])),
         )
         user_state = Value(
             state=ed.Deterministic(

@@ -7,6 +7,7 @@ from recsim_ng.lib.tensorflow import runtime
 import tensorflow as tf
 
 def run_simulation(num_runs, num_users, horizon, epsilon):
+    tf.config.run_functions_eagerly(True)
     """Runs ecosystem simulation multiple times and measures social welfare.
 
     Args:

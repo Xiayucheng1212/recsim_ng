@@ -66,7 +66,7 @@ class InterestEvolutionUser(user.User):
     self._doc_embed_dim = config['doc_embed_dim']
     self._max_user_affinity = max_user_affinity
     self._affinity_model = affinity_model_ctor(
-        (self._num_users,), config['slate_size'], 'negative_euclidean')
+        (self._num_users,), config['slate_size'], 'negative_cosine')
     self._choice_model = choice_model_ctor(
         (self._num_users,), no_click_mass * tf.ones(self._num_users))
     self._interest_generator = initial_interest_generator
@@ -140,7 +140,7 @@ class InterestEvolutionUser(user.User):
     # doc_quality = slate_docs.get('doc_quality')
     # consumed_fraction = tf.sigmoid(-doc_quality)
     # doc_length = slate_docs.get('doc_length')
-    # consumed_time = consumed_fraction * doc_length
+    # consumed_time = consumed_fraction * 1.0
     # chosen_doc_responses = selector_lib.get_chosen(
     #     Value(consumed_time=consumed_time), chosen_doc_idx)
     return choice

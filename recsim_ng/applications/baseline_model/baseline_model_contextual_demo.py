@@ -8,7 +8,7 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 5000
+    horizon = 100
     epsilon = 0.0
     t_begin = time.time()
     reward_mean = baseline_model.run_simulation(num_runs, num_users, horizon, epsilon)

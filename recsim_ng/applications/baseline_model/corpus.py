@@ -68,23 +68,23 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
     # Prepare items that needed to be add on 1
     add_doc_recommend_times = np.zeros((self._num_users, self._num_docs))
     doc_id_recommend = slate_docs.get("doc_id") # user, slate_size
+    slate_size = doc_id_recommend.shape[1]
     for user_idx, per_user in enumerate(add_doc_recommend_times):
-        docs_recommended = doc_id_recommend[user_idx]
-        for i in tf.range(docs_recommended.shape[0]):
-            doc_idx = docs_recommended[i]
-            # TODO: error here when running baseline_model_contextual.py, since we cannot convert tensor to numpy in tensor graph
-            per_user[doc_idx-1] = 1.
+        docs_recommended = doc_id_recommend[user_idx] # slate_size
+        per_user[docs_recommended.numpy()-1] = 1.
     add_doc_recommend_times = tf.convert_to_tensor(add_doc_recommend_times, dtype=tf.float32)
     new_doc_recommend_times = tf.add(previous_state.get("doc_recommend_times"), add_doc_recommend_times)
 
     add_doc_click_times = np.zeros((self._num_users, self._num_docs))
     chosen_idx = user_response.get("choice")
-    doc_id_click = [] # user, 1
-    for user_idx in tf.range(chosen_idx.shape[0]):
-      doc_id_click.append(doc_id_recommend[user_idx][chosen_idx[user_idx]])
     for user_idx, per_user in enumerate(add_doc_click_times):
-      docs_clicked = doc_id_click[user_idx]
-      per_user[docs_clicked-1] = 1.
+      per_user_chosen_idx = chosen_idx[user_idx].numpy() #(1,)
+      # User didn't choose any of the slate docs
+      if(per_user_chosen_idx == slate_size):
+        continue
+      # Notice: the doc id starts from 1, however per_user index start from 0.
+      docs_clicked = doc_id_recommend[user_idx][per_user_chosen_idx]
+      per_user[docs_clicked.numpy()-1] = 1.
     add_doc_click_times = tf.convert_to_tensor(add_doc_click_times, dtype=tf.float32)
     new_doc_click_times = tf.add(previous_state.get("doc_click_times"), add_doc_click_times)
 
