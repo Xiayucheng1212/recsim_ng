@@ -14,10 +14,11 @@ Variable = variable.Variable
 @gin.configurable
 def create_glm_contextual_simulation_network(
     epsilon,
-    num_users=1,
+    num_users=5,
     num_topics = 42,
     doc_embed_dim=1536,
-    slate_size = 2
+    slate_size = 2,
+    history_length = 15
 ):
     num_docs = 20
     config = {
@@ -27,11 +28,12 @@ def create_glm_contextual_simulation_network(
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
+        'history_length': history_length,
     }
     return simulation.recs_story(config, 
                     user_dynamic_interest.InterestEvolutionUser,
                     corpus.CorpusWithEmbeddingsAndTopics,
-                    recommender.GeneralizedLinearRecommender,
+                    recommender.CollabFilteringRecommender,
                     metrics.ClickThroughRateAsRewardMetrics)
 
 @gin.configurable

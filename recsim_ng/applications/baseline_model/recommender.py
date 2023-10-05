@@ -162,3 +162,230 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
                 high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
     return state_spec.prefixed_with("state").union(
         slate_docs_spec.prefixed_with("slate"))
+    
+
+@gin.configurable
+class RandomRecommender(recommender.BaseRecommender):
+   """A generalized linear based recommender implementation."""
+   def __init__(self, config, name="Recommender_Random"):
+    super().__init__(config, name=name)
+    self._num_docs = config.get("num_docs")
+    self._num_topics = config.get("num_topics")
+    self._doc_embed_dim = config.get("doc_embed_dim")
+
+   def initial_state(self):
+    return Value(user_interest=tf.ones((self._num_users, self._doc_embed_dim)))
+   
+   def next_state(self, previous_state, user_response, slate_docs):
+    del previous_state, user_response, slate_docs
+    return Value(user_interest=tf.ones((self._num_users, self._doc_embed_dim)))
+    
+   def slate_docs(self, previous_state, user_obs,
+                 available_docs):
+     # TODO: Implement KNN with Milvus
+        del user_obs
+        del previous_state
+        random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
+        slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
+        return slate
+   
+   # Returns the specs of the state and slate documents.
+   def specs(self):
+    # State_spec returns the specs of model's weights
+    # Slate_docs_spec returns the specs of the recommended documents
+    state_spec = ValueSpec(
+      user_interest=Space(
+            spaces.Box(
+                low=np.ones(
+                    (self._num_users, self._doc_embed_dim)) *
+                -np.Inf,
+                high=np.ones(
+                    (self._num_users, self._doc_embed_dim)) *
+                np.Inf))
+    )
+    slate_docs_spec = ValueSpec(
+        doc_id=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._slate_size)),
+                high=np.ones(
+                    (self._num_users, self._slate_size)) * self._num_docs)),
+        doc_topic=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._slate_size)),
+                high=np.ones((self._num_users, self._slate_size)) * self._num_topics)),
+        doc_quality=Space(
+            spaces.Box(
+                low=np.ones((self._num_users, self._slate_size)) * -np.Inf,
+                high=np.ones((self._num_users, self._slate_size)) * np.Inf)),
+        doc_features=Space(
+            spaces.Box(
+                low=np.ones(
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                -np.Inf,
+                high=np.ones(
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                np.Inf)),
+        doc_recommend_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
+        doc_click_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
+    return state_spec.prefixed_with("state").union(
+        slate_docs_spec.prefixed_with("slate"))
+    
+    
+    
+class CollabFilteringModel(tf.keras.Model):
+  """A tf.keras model that returns score for each (user, document) pair."""
+
+  def __init__(self, num_users, num_docs, doc_embed_dim,
+               history_length):
+    super().__init__(name="CollabFilteringModel")
+    self._num_users = num_users
+    self._history_length = history_length
+    self._num_docs = num_docs
+    self._doc_embed_dim = doc_embed_dim
+    self._doc_proposal_embeddings = tf.keras.layers.Embedding(
+        num_docs + 1,
+        doc_embed_dim,
+        embeddings_initializer=tf.compat.v1.truncated_normal_initializer(),
+        mask_zero=True,
+        name="doc_prop_embedding")
+    self._doc_embeddings = tf.keras.layers.Embedding(
+        num_docs + 1,
+        doc_embed_dim,
+        embeddings_initializer=tf.compat.v1.truncated_normal_initializer(),
+        mask_zero=True,
+        name="doc_embedding")
+    self._net = tf.keras.Sequential(name="recs")
+    self._net.add(tf.keras.layers.Dense(32))
+    self._net.add(tf.keras.layers.LeakyReLU())
+    self._net.add(
+        tf.keras.layers.Dense(self._doc_embed_dim, name="hist_emb_layer"))
+
+  def call(self, doc_id_history, doc_features):
+    # Map doc id to embedding.
+    # [num_users, history_length, embed_dim]
+    doc_history_embeddings = self._doc_embeddings(doc_id_history)
+    
+    # Flatten and run through network to encode history.
+    user_features = tf.reshape(doc_history_embeddings, (self._num_users, -1))
+    user_embeddings = self._net(user_features)
+    #user_embeddings shape : (num_users, doc_embed_dim)
+    # 
+    #-----------------------TODO not sure whether we need this----------------
+    # doc_features = self._doc_proposal_embeddings(
+    #     tf.range(1, self._num_docs + 1, dtype=tf.int32))
+    #-----------------------TODO not sure whether we need this----------------
+    # Score is an inner product between the proposal embeddings(changed to contextual from corpus) and the encoded
+    # history.
+    #doc_features shape: (num_docs, doc_embed_dim)
+    scores = tf.einsum("ik, jk->ij", user_embeddings, doc_features)
+    #scores shape : (num_users, num_docs)
+    return scores
+
+
+@gin.configurable
+class CollabFilteringRecommender(recommender.BaseRecommender):
+  """A collaborative filtering based recommender implementation."""
+
+  def __init__(self,
+               config,
+               model_ctor = CollabFilteringModel,
+               name="Recommender"):  # pytype: disable=annotation-type-mismatch  # typed-keras
+    super().__init__(config, name=name)
+    self._history_length = config["history_length"]
+    self._num_docs = config.get("num_docs")
+    self._num_topics = config.get("num_topics")
+    self._doc_embed_dim = config.get("doc_embed_dim")
+    self._model = model_ctor(self._num_users, self._num_docs, self._doc_embed_dim,
+                             self._history_length)
+    doc_history_model = estimation.FiniteHistoryStateModel(
+        history_length=self._history_length,
+        observation_shape=(),
+        batch_shape=(self._num_users,),
+        dtype=tf.int32)
+    self._doc_history = dynamic.NoOPOrContinueStateModel(
+        doc_history_model, batch_ndims=1)
+    
+    self._document_sampler = selector_lib.IteratedMultinomialLogitChoiceModel(
+        self._slate_size, (self._num_users,),
+        -np.Inf * tf.ones(self._num_users))
+
+  def initial_state(self):
+    """The initial state value."""
+    doc_history_initial = self._doc_history.initial_state().prefixed_with(
+        "doc_history")
+    return doc_history_initial
+
+  def next_state(self, previous_state, user_response,
+                 slate_docs):
+    """The state value after the initial value."""
+    chosen_doc_idx = user_response.get("choice")
+    chosen_doc_features = selector_lib.get_chosen(slate_docs, chosen_doc_idx)
+    # Update doc_id history.
+    doc_consumed = tf.reshape(
+        chosen_doc_features.get("doc_id"), [self._num_users])
+    # We update histories of only users who chose a doc.
+    no_choice = tf.equal(user_response.get("choice"),
+                         self._slate_size)[Ellipsis, tf.newaxis]
+    next_doc_id_history = self._doc_history.next_state(
+        previous_state.get("doc_history"),
+        Value(input=doc_consumed,
+              condition=no_choice)).prefixed_with("doc_history")
+    return next_doc_id_history
+
+  def slate_docs(self, previous_state, user_obs,
+                 available_docs):
+    """The slate_docs value."""
+    del user_obs
+    docid_history = previous_state.get("doc_history").get("state")
+    # pass the contextual doc embeddings to the model
+    scores = self._model(docid_history, available_docs.get("doc_features"))
+    doc_indices = self._document_sampler.choice(scores).get("choice")
+    slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field)
+    return slate.union(Value(doc_ranks=doc_indices))
+
+  def specs(self):
+    state_spec = self._doc_history.specs().prefixed_with("doc_history")
+    slate_docs_spec = ValueSpec(
+        doc_ranks=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones(
+                    (self._num_users, self._num_docs)) * self._num_docs)),
+        doc_id=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._slate_size)),
+                high=np.ones(
+                    (self._num_users, self._slate_size)) * self._num_docs)),
+        doc_topic=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._slate_size)),
+                high=np.ones(
+                    (self._num_users, self._slate_size)) * self._num_topics)),
+        doc_quality=Space(
+            spaces.Box(
+                low=np.ones((self._num_users, self._slate_size)) * -np.Inf,
+                high=np.ones((self._num_users, self._slate_size)) * np.Inf)),
+        doc_features=Space(
+            spaces.Box(
+                low=np.ones(
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                -np.Inf,
+                high=np.ones(
+                    (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                np.Inf)),
+        doc_recommend_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
+        doc_click_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)))
+    return state_spec.prefixed_with("state").union(
+        slate_docs_spec.prefixed_with("slate"))
