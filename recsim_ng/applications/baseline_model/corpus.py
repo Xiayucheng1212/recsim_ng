@@ -36,7 +36,7 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
                config):
 
     super().__init__(config)
-    self._data_path = '../../../str_embed/data/embeddings.csv'
+    self._data_path = './str_embed/data/embeddings.csv'
     self._col_name_embed = 'embedding'
     self._col_name_topic = 'category_encoded'
     self._num_users = config['num_users']

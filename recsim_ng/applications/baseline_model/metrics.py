@@ -51,11 +51,11 @@ class SuccessRateMetrics(metrics.RecsMetricsBase):
         
     def specs(self):
         return ValueSpec(
-            click=Space(
+            reward=Space(
                 spaces.Box(
                     low=np.zeros(self._num_users),
                     high=np.array([np.Inf] * self._num_users))),
-            cumulative_click=Space(
+            cumulative_reward=Space(
                 spaces.Box(
                     low=np.zeros(self._num_users),
                     high=np.array([np.Inf] *

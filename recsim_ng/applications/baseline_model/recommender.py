@@ -273,13 +273,8 @@ class CollabFilteringModel(tf.keras.Model):
     
     # Flatten and run through network to encode history.
     user_features = tf.reshape(doc_history_embeddings, (self._num_users, -1))
-    user_embeddings = self._net(user_features)
     #user_embeddings shape : (num_users, doc_embed_dim)
-    # 
-    #-----------------------TODO not sure whether we need this----------------
-    # doc_features = self._doc_proposal_embeddings(
-    #     tf.range(1, self._num_docs + 1, dtype=tf.int32))
-    #-----------------------TODO not sure whether we need this----------------
+    user_embeddings = self._net(user_features)
     # Score is an inner product between the proposal embeddings(changed to contextual from corpus) and the encoded
     # history.
     #doc_features shape: (num_docs, doc_embed_dim)
