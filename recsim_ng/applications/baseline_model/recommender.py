@@ -400,6 +400,9 @@ class LinearUCBRecommender(recommender.BaseRecommender):
 
     def initial_state(self):
         """Parameter Initialization"""
+        self._A = []
+        self._invA = []
+        self._b = []
         for u in range(self._num_users):
             A_per_user = []
             invA_per_user = []
@@ -415,26 +418,39 @@ class LinearUCBRecommender(recommender.BaseRecommender):
         self._A = tf.convert_to_tensor(self._A, dtype=tf.float32)
         self._invA = tf.convert_to_tensor(self._invA, dtype=tf.float32)
         self._b = tf.convert_to_tensor(self._b, dtype=tf.float32)
+        return Value(arm_param = self._A, arm_bias = self._b)
 
                 
     def next_state(self, previous_state, user_response, slate_docs):
         """The state value after the initial value."""
         del previous_state
         chosen_doc_idx = user_response.get("choice").numpy()
-        chosen_real_id = slate_docs.get("doc_id").numpy()[np.arange(self._num_users), chosen_doc_idx]-1
 
-        # chosen_doc_features shape: (num_users, 1, doc_embed_dim)
-        chosen_doc_features = tf.reshape(selector_lib.get_chosen(slate_docs, chosen_doc_idx).get("doc_features"), [self._num_users, 1, self._doc_embed_dim])
+        if chosen_doc_idx != self._slate_size:
+            chosen_real_id = slate_docs.get("doc_id").numpy()[np.arange(self._num_users), chosen_doc_idx]
+        else:
+            chosen_real_id = slate_docs.get("doc_id").numpy()
+        # chosen real id start from 0, so we need to -1 from the slate_doc's doc_id
+        chosen_real_id = np.reshape(chosen_real_id, (self._num_users, -1))-1
+
         for u in range(self._num_users):
             # we assume reward r = 1.0 as clicked and r = -1.0 as not clicked
             reward = 1.0 if chosen_doc_idx[u] != self._slate_size else -1.0
-            A_update = tf.matmul(chosen_doc_features[u], chosen_doc_features[u], transpose_a=True)
-            self._A = tf.tensor_scatter_nd_add(self._A, indices=[[u, chosen_real_id[u]]], updates=[A_update])
-            # Update formula of b = b + r * x
-            b_update = tf.reshape(chosen_doc_features[u], (self._doc_embed_dim, 1)) * reward
-            self._b = tf.tensor_scatter_nd_add(self._b, indices=[[u, chosen_real_id[u]]], updates=[b_update])
-            invA_update = tf.linalg.inv(self._A[u][chosen_real_id[u]])
-            self._invA = tf.tensor_scatter_nd_update(self._invA, indices=[[u, chosen_real_id[u]]], updates=[invA_update])
+            chosen_doc_idx_per_user = chosen_doc_idx[u] if chosen_doc_idx[u] != self._slate_size else np.arange(self._slate_size)
+            chosen_doc_idx_per_user = np.reshape(chosen_doc_idx_per_user, (1, -1)) #(one user, slate_size) or (one user, 1)
+            # chosen_doc_features shape: (slate_size or 1, 1, doc_embed_dim)
+            chosen_doc_features_per_user = tf.reshape(selector_lib.get_chosen(slate_docs, chosen_doc_idx_per_user).get("doc_features"), [-1, 1, self._doc_embed_dim])
+
+            for i in range(len(chosen_real_id[u])):
+                A_update = tf.matmul(chosen_doc_features_per_user[i], chosen_doc_features_per_user[i], transpose_a=True)
+                self._A = tf.tensor_scatter_nd_add(self._A,  indices=[[u, chosen_real_id[u][i]]], updates=[A_update])
+                # Update formula of b = b + r * x
+                b_update = tf.reshape(chosen_doc_features_per_user[i], (self._doc_embed_dim, 1)) * reward
+                self._b = tf.tensor_scatter_nd_add(self._b, indices=[[u, chosen_real_id[u][i]]], updates=[b_update])
+                invA_update = tf.linalg.inv(self._A[u][chosen_real_id[u][i]])
+                self._invA = tf.tensor_scatter_nd_update(self._invA, indices=[[u, chosen_real_id[u][i]]], updates=[invA_update])
+
+        return Value(arm_param = self._A, arm_bias = self._b)
 
     def slate_docs(self, previous_state, user_obs, available_docs):
         """The slate_docs value."""
@@ -461,6 +477,18 @@ class LinearUCBRecommender(recommender.BaseRecommender):
         return slate
 
     def specs(self):
+        state_spec = ValueSpec(
+           arm_param = Space(
+              spaces.Box(
+                 low = np.ones((self._num_users, self._num_docs, self._doc_embed_dim, self._doc_embed_dim)) * -np.Inf,
+                 high = np.ones((self._num_users, self._num_docs, self._doc_embed_dim, self._doc_embed_dim)) * np.Inf)),
+           arm_bias = Space(
+                spaces.Box(
+                    low = np.ones((self._num_users, self._num_docs, self._doc_embed_dim, 1)) * -np.Inf,
+                    high = np.ones((self._num_users, self._num_docs, self._doc_embed_dim, 1)) * np.Inf
+                )
+           )
+        )
         slate_docs_spec = ValueSpec(
             doc_id=Space(
                 spaces.Box(
@@ -492,4 +520,4 @@ class LinearUCBRecommender(recommender.BaseRecommender):
                 spaces.Box(
                     low=np.zeros((self._num_users, self._num_docs)),
                     high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)))
-        return slate_docs_spec.prefixed_with("slate")
+        return state_spec.prefixed_with("state").union(slate_docs_spec.prefixed_with("slate"))

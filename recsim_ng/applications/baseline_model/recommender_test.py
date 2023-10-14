@@ -29,13 +29,14 @@ class LinearUCBRecommenderTest(tf.test.TestCase):
             'slate_size': self._slate_size,
         }
     def test_next_states(self):
-        """Tests next state with the GLM model"""
+        """Tests next state with the LinUCB model"""
         self._recommender = recommender.LinearUCBRecommender(
             self._config, alpha=self._alpha)
         init_state = self._recommender.initial_state()
         # Creates a dummy user response.
         mock_user_response = Value(
             choice=ed.Deterministic(
+                # Don't choose any doc
                 loc=tf.constant([1], dtype=tf.int32)))
         # Creates a dummy slate_docs with doc_features
         mock_slate_docs = Value(

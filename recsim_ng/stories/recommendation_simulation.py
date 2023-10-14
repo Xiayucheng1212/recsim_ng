@@ -33,6 +33,7 @@ def recs_story(
     corpus_ctor,
     recommender_ctor,
     metrics_ctor,
+    final_metrics_ctor=None,
 ):
   """Recommendation story."""
   # Construct entities.
@@ -44,6 +45,9 @@ def recs_story(
   recommender_spec = recommender.specs()
   metrics = metrics_ctor(config)
   metrics_spec = metrics.specs()
+  if final_metrics_ctor is not None:
+    final_metrics = final_metrics_ctor(config)
+    final_metrics_spec = final_metrics.specs()
 
   # Variables
 
@@ -56,12 +60,16 @@ def recs_story(
   user_observation = Variable(
       name="user observation", spec=user_spec.get("observation"))
   metrics_state = Variable(name="metrics state", spec=metrics_spec.get("state"))
+  if final_metrics_ctor is not None:
+    final_metrics_state = Variable(name="final metrics state", spec=final_metrics_spec.get("state"))
   recommender_state = Variable(
       name="recommender state", spec=recommender_spec.get("state"))
 
   # 0. Initial state.
 
   metrics_state.initial_value = variable.value(metrics.initial_metrics)
+  if final_metrics_ctor is not None:
+    final_metrics_state.initial_value = variable.value(final_metrics.initial_metrics)
   corpus_state.initial_value = variable.value(corpus.initial_state)
   available_docs.initial_value = variable.value(corpus.available_documents,
                                                 (corpus_state,))
@@ -113,11 +121,20 @@ def recs_story(
 
   user_response.value = variable.value(user.next_response,
                                        (user_state, slate_docs))
+  
+  #6. Final metrics calculation.
+  if final_metrics_ctor is not None:
+    final_metrics_state.value = variable.value(final_metrics.next_metrics, 
+        (final_metrics_state.previous, corpus_state.previous, user_state.previous,
+        user_response.previous, slate_docs.previous))
+    
 
   variables = [
       user_state, user_response, corpus_state, available_docs, slate_docs,
       recommender_state, metrics_state, user_observation
   ]
+  if final_metrics_ctor is not None:
+    variables.append(final_metrics_state)
 
   return variables
 
