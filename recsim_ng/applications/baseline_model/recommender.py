@@ -384,3 +384,112 @@ class CollabFilteringRecommender(recommender.BaseRecommender):
                 high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)))
     return state_spec.prefixed_with("state").union(
         slate_docs_spec.prefixed_with("slate"))
+
+@gin.configurable
+class LinearUCBRecommender(recommender.BaseRecommender):
+    """A linear UCB based recommender implementation. See https://zhuanlan.zhihu.com/p/545790329 for more details."""
+    def __init__(self, config,alpha=0.5, name="LinearUCB"):
+      super().__init__(config, name=name)
+      self._num_docs = config.get("num_docs")
+      self._num_topics = config.get("num_topics")
+      self._doc_embed_dim = config.get("doc_embed_dim")
+      self._alpha = alpha
+      self._A = []
+      self._invA = []
+      self._b = []
+
+    def initial_state(self):
+        """Parameter Initialization"""
+        for u in range(self._num_users):
+            A_per_user = []
+            invA_per_user = []
+            b_per_user = []
+            for i in range(self._num_docs):
+                A_per_user.append(np.eye(self._doc_embed_dim))
+                invA_per_user.append(np.eye(self._doc_embed_dim))
+                b_per_user.append(np.zeros((self._doc_embed_dim, 1)))
+            self._A.append(A_per_user)
+            self._invA.append(invA_per_user)
+            self._b.append(b_per_user)
+        # self._A shape: (num_users, num_docs, doc_embed_dim, doc_embed_dim)
+        self._A = tf.convert_to_tensor(self._A, dtype=tf.float32)
+        self._invA = tf.convert_to_tensor(self._invA, dtype=tf.float32)
+        self._b = tf.convert_to_tensor(self._b, dtype=tf.float32)
+
+                
+    def next_state(self, previous_state, user_response, slate_docs):
+        """The state value after the initial value."""
+        del previous_state
+        chosen_doc_idx = user_response.get("choice").numpy()
+        chosen_real_id = slate_docs.get("doc_id").numpy()[np.arange(self._num_users), chosen_doc_idx]-1
+
+        # chosen_doc_features shape: (num_users, 1, doc_embed_dim)
+        chosen_doc_features = tf.reshape(selector_lib.get_chosen(slate_docs, chosen_doc_idx).get("doc_features"), [self._num_users, 1, self._doc_embed_dim])
+        for u in range(self._num_users):
+            # we assume reward r = 1.0 as clicked and r = -1.0 as not clicked
+            reward = 1.0 if chosen_doc_idx[u] != self._slate_size else -1.0
+            A_update = tf.matmul(chosen_doc_features[u], chosen_doc_features[u], transpose_a=True)
+            self._A = tf.tensor_scatter_nd_add(self._A, indices=[[u, chosen_real_id[u]]], updates=[A_update])
+            # Update formula of b = b + r * x
+            b_update = tf.reshape(chosen_doc_features[u], (self._doc_embed_dim, 1)) * reward
+            self._b = tf.tensor_scatter_nd_add(self._b, indices=[[u, chosen_real_id[u]]], updates=[b_update])
+            invA_update = tf.linalg.inv(self._A[u][chosen_real_id[u]])
+            self._invA = tf.tensor_scatter_nd_update(self._invA, indices=[[u, chosen_real_id[u]]], updates=[invA_update])
+
+    def slate_docs(self, previous_state, user_obs, available_docs):
+        """The slate_docs value."""
+        del user_obs
+        del previous_state
+        # doc_features shape: (num_docs, 1, doc_embed_dim)
+        doc_features = tf.reshape(available_docs.get("doc_features"), [self._num_docs, 1, self._doc_embed_dim])
+        # doc_ucb_scores shape: (num_users, num_docs)
+        doc_ucb_scores = []
+        # Calculate the UCB score for each doc
+        for u in range(self._num_users):
+            doc_ucb_scores_per_user = []
+            for i in range(self._num_docs):
+                theta = tf.matmul(self._invA[u][i], self._b[u][i])
+                score = tf.matmul(doc_features[i], theta) + self._alpha * tf.sqrt(tf.matmul(tf.matmul(doc_features[i], self._invA[u][i]), doc_features[i], transpose_b=True))
+                doc_ucb_scores_per_user.append(score[0])
+
+            doc_ucb_scores.append(doc_ucb_scores_per_user)
+        doc_ucb_scores = tf.reshape(tf.convert_to_tensor(doc_ucb_scores, dtype=tf.float32), [self._num_users, self._num_docs])
+        # Choose the top-k highest smilarity docs
+        # doc_indices shape: (num_users, slate_size)
+        _, doc_indices = tf.math.top_k(doc_ucb_scores, k=self._slate_size)
+        slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
+        return slate
+
+    def specs(self):
+        slate_docs_spec = ValueSpec(
+            doc_id=Space(
+                spaces.Box(
+                    low=np.zeros((self._num_users, self._slate_size)),
+                    high=np.ones(
+                        (self._num_users, self._slate_size)) * self._num_docs)),
+            doc_topic=Space(
+                spaces.Box(
+                    low=np.zeros((self._num_users, self._slate_size)),
+                    high=np.ones(
+                        (self._num_users, self._slate_size)) * self._num_topics)),
+            doc_quality=Space(
+                spaces.Box(
+                    low=np.ones((self._num_users, self._slate_size)) * -np.Inf,
+                    high=np.ones((self._num_users, self._slate_size)) * np.Inf)),
+            doc_features=Space(
+                spaces.Box(
+                    low=np.ones(
+                        (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                    -np.Inf,
+                    high=np.ones(
+                        (self._num_users, self._slate_size, self._doc_embed_dim)) *
+                    np.Inf)),
+            doc_recommend_times=Space(
+                spaces.Box(
+                    low=np.zeros((self._num_users, self._num_docs)),
+                    high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
+            doc_click_times=Space(
+                spaces.Box(
+                    low=np.zeros((self._num_users, self._num_docs)),
+                    high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)))
+        return slate_docs_spec.prefixed_with("slate")
