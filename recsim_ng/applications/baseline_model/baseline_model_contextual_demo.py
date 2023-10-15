@@ -54,7 +54,7 @@ def main(argv):
     num_runs = 3
     num_users = 1
     horizon = 100
-    epsilon = 0.0
+    epsilon = 0.5
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))

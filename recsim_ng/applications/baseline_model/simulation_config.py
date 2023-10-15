@@ -39,7 +39,7 @@ def create_linUCB_simulation_network(
 @gin.configurable
 def create_glm_contextual_simulation_network(
     epsilon,
-    num_users=5,
+    num_users=1,
     num_topics = 42,
     doc_embed_dim=1536,
     slate_size = 2,
@@ -58,7 +58,7 @@ def create_glm_contextual_simulation_network(
     return simulation.recs_story(config, 
                     user_dynamic_interest.InterestEvolutionUser,
                     corpus.CorpusWithEmbeddingsAndTopics,
-                    recommender.CollabFilteringRecommender,
+                    recommender.GeneralizedLinearRecommender,
                     metrics.SuccessRateMetrics,
                     metrics.ClickThroughRateAsRewardMetrics)
 
