@@ -9,7 +9,7 @@ from recsim_ng.lib.tensorflow import util
 def main(argv):
     del argv
     num_runs = 3
-    num_users = 1
+    num_users = 5
     horizon = 5000
     epsilon = 0.0
     t_begin = time.time()

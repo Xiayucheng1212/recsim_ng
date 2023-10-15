@@ -58,7 +58,7 @@ def create_glm_contextual_simulation_network(
     return simulation.recs_story(config, 
                     user_dynamic_interest.InterestEvolutionUser,
                     corpus.CorpusWithEmbeddingsAndTopics,
-                    recommender.CollabFilteringRecommender,
+                    recommender.GeneralizedLinearRecommender,
                     metrics.ClickThroughRateAsRewardMetrics)
 
 @gin.configurable
