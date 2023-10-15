@@ -59,6 +59,7 @@ def create_glm_contextual_simulation_network(
                     user_dynamic_interest.InterestEvolutionUser,
                     corpus.CorpusWithEmbeddingsAndTopics,
                     recommender.CollabFilteringRecommender,
+                    metrics.SuccessRateMetrics,
                     metrics.ClickThroughRateAsRewardMetrics)
 
 @gin.configurable
@@ -66,14 +67,15 @@ def create_one_user_glm_simulation_network(
     epsilon,
     num_users = 1,
     doc_embed_dim = 32,
-    slate_size = 3,
+    slate_size = 2,
     freeze_corpus = True
 ):
     """Retuns a network for the glm-based recommender simulation with viable corpus."""
-    num_docs = 100
+    num_docs = 20
     config = {
         'epsilon': epsilon,
         'num_topics': doc_embed_dim,
+        'doc_embed_dim': doc_embed_dim,
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
@@ -89,4 +91,5 @@ def create_one_user_glm_simulation_network(
                                  user_dynamic_interest.InterestEvolutionUser,
                                  corpus_ctor,
                                  recommender.GeneralizedLinearRecommender,
-                                 metrics.ConsumedTimeAsRewardMetrics)
+                                 metrics.SuccessRateMetrics,
+                                 metrics.ClickThroughRateAsRewardMetrics)

@@ -37,7 +37,7 @@ class LinearUCBRecommenderTest(tf.test.TestCase):
         mock_user_response = Value(
             choice=ed.Deterministic(
                 # Don't choose any doc
-                loc=tf.constant([1], dtype=tf.int32)))
+                loc=tf.constant([2], dtype=tf.int32)))
         # Creates a dummy slate_docs with doc_features
         mock_slate_docs = Value(
             doc_id=tf.constant([[2, 3]], dtype=tf.int32),
