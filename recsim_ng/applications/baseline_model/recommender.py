@@ -37,7 +37,7 @@ Space = field_spec.Space
 class GeneralizedLinearModel(tf.keras.Model):
     """A tf.keras model that returns one score for the input document. 
     Also, the weight in this linear model will be used as the user interest for the #slate_docs. """
-    def __init__(self, num_docs, doc_embed_dim, num_users = 1):
+    def __init__(self, num_docs, doc_embed_dim, num_users = 5):
         super().__init__(name="GeneralizedLinearModel")
         self._num_users = num_users
         self._num_docs = num_docs
@@ -58,8 +58,8 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
     self._num_topics = config.get("num_topics")
     self._doc_embed_dim = config.get("doc_embed_dim")
     self._epsilon = float(config.get("epsilon"))
-    self._optimizer = keras.optimizers.SGD(0.1)
-    self._model = model_ctor(self._num_docs, self._doc_embed_dim, self._num_users)
+    self._optimizer = [keras.optimizers.SGD(0.1) for i in range(self._num_users)]
+    self._model = [model_ctor(self._num_docs, self._doc_embed_dim, self._num_users) for i in range(self._num_users)]
     self._train_acc = keras.metrics.BinaryAccuracy()
     self._train_loss = keras.metrics.Mean(name='train_loss')
     # The slate_size here is changed to num_docs, since we need to check all affinities in the available_docs
@@ -71,27 +71,28 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      self._train_acc.reset_states()
      # Returns the model weights as a user interest
      # Notice: use trainable_weights instead of get_weights(), so that it can run inside the tensorflow graph.
-     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim]))
+     all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
+     return Value(user_interest=tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim]))
    
    def next_state(self, previous_state, user_response, slate_docs):
      # Prepares training and ground_truth data
      del previous_state
-     chosen_doc_idx = user_response.get("choice")
-     training_y = tf.one_hot(chosen_doc_idx, depth = self._slate_size)
      # Upadte one step for each doc in the user_response
      # Although we only have 1 user, for the generality we still keep the for loop for num_users
      for i in range(self._num_users):
+        chosen_doc_idx = user_response.get("choice")[i]
+        training_y = tf.one_hot(chosen_doc_idx, depth = self._slate_size)
         training_x = slate_docs.as_dict["doc_features"][i]
         with tf.GradientTape() as tape:
             training_x_reshaped = tf.reshape(training_x, (self._slate_size, -1))
             training_y_reshaped = tf.reshape(training_y, (-1, 1))
-
-            pred = self._model(training_x_reshaped)
-
+            
+            pred = self._model[i](training_x_reshaped)
             loss = keras.losses.binary_crossentropy(training_y_reshaped, pred)
-            grads = tape.gradient(loss, self._model.trainable_variables) 
-            self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
-     return Value(user_interest=tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim]))
+            grads = tape.gradient(loss, self._model[i].trainable_variables) 
+            self._optimizer[i].apply_gradients(zip(grads, self._model[i].trainable_variables))
+     all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
+     return Value(user_interest=tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim]))
 
    def slate_docs(self, previous_state, user_obs,
                  available_docs):
@@ -105,7 +106,8 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      else: # Exploitation Stage
         # The affinity model used -tf.keras.losses.cosine_similarity to calculate similarity
         # Ranging from (-1, 1), 1 means high similarity and -1 means high dissimilarity. 
-        user_interest = tf.reshape(self._model.trainable_weights[0], [self._num_users, self._doc_embed_dim])
+        all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
+        user_interest = tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim])
         affinities = self._affinity_model.affinities( 
             # user_interest: (num_users, n_features)
             user_interest,
