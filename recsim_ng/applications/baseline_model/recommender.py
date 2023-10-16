@@ -154,6 +154,10 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
                 high=np.ones(
                     (self._num_users, self._slate_size, self._doc_embed_dim)) *
                 np.Inf)),
+        doc_vector=Space(
+            spaces.Box(
+                low=np.zeros((self._num_docs, self._num_topics)),
+                high=np.ones((self._num_docs, self._num_topics)))),
         doc_recommend_times=Space(
             spaces.Box(
                 low=np.zeros((self._num_users, self._num_docs)),

@@ -36,7 +36,7 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
                config):
 
     super().__init__(config)
-    self._data_path = './str_embed/data/embeddings.csv'
+    self._data_path = '../../../str_embed/data/embeddings.csv'
     self._col_name_embed = 'embedding'
     self._col_name_topic = 'category_encoded'
     self._num_users = config['num_users']
@@ -44,8 +44,12 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
   
   def initial_state(self):
     df = pd.read_csv(self._data_path)
+    #doc_feature is for recommender learning
     doc_features = tf.convert_to_tensor([ast.literal_eval(embed) for embed in df[self._col_name_embed]])
     doc_topic = tf.convert_to_tensor(df[self._col_name_topic])
+    #doc_vector is for deciding users click or not
+    doc_vector = ed.Normal(
+        loc=tf.one_hot(doc_topic, depth=self._num_topics), scale=0.7)
     topic_quality_means = tf.random.uniform([self._num_topics], minval=-1.0, maxval=1.0)
     doc_quality_var = 0.1
     doc_quality = ed.Normal(
@@ -60,6 +64,7 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
         doc_topic=doc_topic,
         doc_quality=doc_quality,
         doc_features=doc_features,
+        doc_vector = doc_vector,
         doc_recommend_times = doc_recommend_times,
         doc_click_times = doc_click_times
     )
@@ -94,6 +99,7 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
         doc_topic=previous_state.get("doc_topic"),
         doc_quality=previous_state.get("doc_quality"),
         doc_features=previous_state.get("doc_features"),
+        doc_vector=previous_state.get("doc_vector"),
         doc_recommend_times = new_doc_recommend_times,
         doc_click_times = new_doc_click_times
     )
@@ -120,6 +126,10 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
             spaces.Box(
                 low=np.ones((self._num_docs, self._doc_embed_dim)) * np.Inf,
                 high=np.ones((self._num_docs, self._doc_embed_dim)))),
+        doc_vector=Space(
+            spaces.Box(
+                low=np.zeros((self._num_docs, self._num_topics)),
+                high=np.ones((self._num_docs, self._num_topics)))),
        #Notice: each user needs a isolated space for their click and recommended history, so the shape is (num_users, num_docs)
         doc_recommend_times=Space(
             spaces.Box(
