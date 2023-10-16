@@ -5,7 +5,7 @@ import numpy as np
 from recsim_ng.applications.baseline_model import corpus
 from recsim_ng.applications.baseline_model import metrics
 from recsim_ng.applications.baseline_model import recommender
-from recsim_ng.applications.baseline_model import user_dynamic_interest
+from recsim_ng.applications.baseline_model import user_interest
 from recsim_ng.core import variable
 from recsim_ng.stories import recommendation_simulation as simulation
 
@@ -18,6 +18,7 @@ def create_linUCB_simulation_network(
     num_topics=42,
     doc_embed_dim=1536,
     slate_size=2,
+    freeze_user = True,
 ):
     """Returns a network for the LinUCB simulation."""
     num_docs = 20
@@ -29,8 +30,16 @@ def create_linUCB_simulation_network(
         'num_docs': num_docs,
         'slate_size': slate_size,
     }
+
+    if freeze_user:
+        user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
+            config).initial_state()
+        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+    else:
+        user_ctor = user_interest.InterestEvolutionUser
+
     return simulation.recs_story(config, 
-                    user_dynamic_interest.InterestEvolutionUser,
+                    user_ctor,
                     corpus.CorpusWithEmbeddingsAndTopics,
                     recommender.LinearUCBRecommender,
                     metrics.SuccessRateMetrics,
@@ -43,7 +52,8 @@ def create_glm_contextual_simulation_network(
     num_topics = 42,
     doc_embed_dim=1536,
     slate_size = 2,
-    history_length = 15
+    history_length = 15,
+    freeze_user = True
 ):
     num_docs = 20
     config = {
@@ -55,8 +65,16 @@ def create_glm_contextual_simulation_network(
         'slate_size': slate_size,
         'history_length': history_length,
     }
+
+    if freeze_user:
+        user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
+            config).initial_state()
+        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+    else:
+        user_ctor = user_interest.InterestEvolutionUser
+
     return simulation.recs_story(config, 
-                    user_dynamic_interest.InterestEvolutionUser,
+                    user_ctor,
                     corpus.CorpusWithEmbeddingsAndTopics,
                     recommender.GeneralizedLinearRecommender,
                     metrics.SuccessRateMetrics,
@@ -88,7 +106,7 @@ def create_one_user_glm_simulation_network(
         corpus_ctor = corpus.CorpusWithTopicAndQuality
 
     return simulation.recs_story(config, 
-                                 user_dynamic_interest.InterestEvolutionUser,
+                                 user_interest.InterestEvolutionUser,
                                  corpus_ctor,
                                  recommender.GeneralizedLinearRecommender,
                                  metrics.SuccessRateMetrics,
