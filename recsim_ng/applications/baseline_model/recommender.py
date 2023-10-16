@@ -446,7 +446,7 @@ class LinearUCBRecommender(recommender.BaseRecommender):
             chosen_doc_idx_per_user = np.reshape(chosen_doc_idx_per_user, (1, -1)) #(one user, slate_size) or (one user, 1)
             # chosen_doc_features shape: (slate_size or 1, 1, doc_embed_dim)
             chosen_doc_features_per_user = tf.reshape(selector_lib.get_chosen(slate_docs, chosen_doc_idx_per_user).get("doc_features"), [-1, 1, self._doc_embed_dim])
-
+            # Chosen_doc_features_per_user <-> chosen_real_id_per_user is one-to-one mapping
             for i in range(len(chosen_real_id[u])):
                 A_update = tf.matmul(chosen_doc_features_per_user[i], chosen_doc_features_per_user[i], transpose_a=True)
                 self._A = tf.tensor_scatter_nd_add(self._A,  indices=[[u, chosen_real_id[u][i]]], updates=[A_update])

@@ -41,7 +41,6 @@ def tensor_space(low = -np.Inf,
                  shape = ()):
   return Space(spaces.Box(low=low, high=high, shape=shape))
 
-
 @gin.configurable
 class InterestEvolutionUser(user.User):
   """Dynamics of a user whose interests evolve over time."""
@@ -64,6 +63,7 @@ class InterestEvolutionUser(user.User):
     super().__init__(config)
     self._config = config
     self._doc_embed_dim = config['doc_embed_dim']
+    self._num_topics = config['num_topics']
     self._max_user_affinity = max_user_affinity
     self._affinity_model = affinity_model_ctor(
         (self._num_users,), config['slate_size'], 'negative_cosine')
@@ -81,6 +81,7 @@ class InterestEvolutionUser(user.User):
         control_scales=interest_step_size *
         tf.ones(self._num_users, dtype=tf.float32),
         noise_scales=interest_noise,
+        # initial_dis_scales is the standard deviation of the initial distribution
         initial_dist_scales=tf.ones(self._num_users, dtype=tf.float32))
     self._interest_model = dynamic.NoOPOrContinueStateModel(
         interest_model, batch_ndims=1)
@@ -158,3 +159,24 @@ class InterestEvolutionUser(user.User):
     return state_spec.prefixed_with('state').union(
         observation_spec.prefixed_with('observation')).union(
             response_spec.prefixed_with('response'))
+  
+class StaticUser(InterestEvolutionUser):
+  """Defines a static user with state passed from outside."""
+
+  def __init__(self, config, static_state):
+    super().__init__(config)
+    self._static_state = static_state
+
+  def initial_state(self):
+    """The initial state value."""
+    return self._static_state.map(tf.identity)
+
+  def next_state(self, previous_state, user_response,
+                 slate_docs):
+    """The state value after the initial value."""
+    del user_response
+    del slate_docs
+    return previous_state.map(tf.identity)
+
+
+

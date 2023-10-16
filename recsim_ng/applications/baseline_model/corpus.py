@@ -158,6 +158,7 @@ class CorpusWithTopicAndQuality(corpus.Corpus):
     self._topic_min_utility = topic_min_utility
     self._topic_max_utility = topic_max_utility
     self._video_length = video_length
+    self._num_users = config['num_users']
 
   def initial_state(self):
     """The initial state value."""
@@ -178,8 +179,10 @@ class CorpusWithTopicAndQuality(corpus.Corpus):
     doc_features = ed.Normal(
         loc=tf.one_hot(doc_topic, depth=self._num_topics), scale=0.7)
     # All videos have same length.
-    video_length = ed.Deterministic(
-        loc=tf.ones((self._num_docs,)) * self._video_length)
+    # video_length = ed.Deterministic(
+    #     loc=tf.ones((self._num_docs,)) * self._video_length)
+    doc_recommend_times = tf.zeros([self._num_users, self._num_docs])
+    doc_click_times = tf.zeros([self._num_users, self._num_docs])
 
     return Value(
         # doc_id=0 is reserved for "null" doc.
@@ -188,14 +191,45 @@ class CorpusWithTopicAndQuality(corpus.Corpus):
         doc_topic=doc_topic,
         doc_quality=doc_quality,
         doc_features=doc_features,
-        doc_length=video_length)
+        doc_recommend_times = doc_recommend_times,
+        doc_click_times = doc_click_times
+        )
 
   def next_state(self, previous_state, user_response,
                  slate_docs):
     """The state value after the initial value."""
-    del user_response
-    del slate_docs
-    return previous_state.map(ed.Deterministic)
+    # Prepare items that needed to be add on 1
+    add_doc_recommend_times = np.zeros((self._num_users, self._num_docs))
+    doc_id_recommend = slate_docs.get("doc_id") # user, slate_size
+    slate_size = doc_id_recommend.shape[1]
+    for user_idx, per_user in enumerate(add_doc_recommend_times):
+        docs_recommended = doc_id_recommend[user_idx] # slate_size
+        per_user[docs_recommended.numpy()-1] = 1.
+    add_doc_recommend_times = tf.convert_to_tensor(add_doc_recommend_times, dtype=tf.float32)
+    new_doc_recommend_times = tf.add(previous_state.get("doc_recommend_times"), add_doc_recommend_times)
+
+    add_doc_click_times = np.zeros((self._num_users, self._num_docs))
+    chosen_idx = user_response.get("choice")
+    for user_idx, per_user in enumerate(add_doc_click_times):
+      per_user_chosen_idx = chosen_idx[user_idx].numpy() #(1,)
+      # User didn't choose any of the slate docs
+      if(per_user_chosen_idx == slate_size):
+        continue
+      # Notice: the doc id starts from 1, however per_user index start from 0.
+      docs_clicked = doc_id_recommend[user_idx][per_user_chosen_idx]
+      per_user[docs_clicked.numpy()-1] = 1.
+    add_doc_click_times = tf.convert_to_tensor(add_doc_click_times, dtype=tf.float32)
+    new_doc_click_times = tf.add(previous_state.get("doc_click_times"), add_doc_click_times)
+
+    return Value(
+        # doc_id=0 is reserved for "null" doc.
+        doc_id=previous_state.get("doc_id"),
+        doc_topic=previous_state.get("doc_topic"),
+        doc_quality=previous_state.get("doc_quality"),
+        doc_features=previous_state.get("doc_features"),
+        doc_recommend_times = new_doc_recommend_times,
+        doc_click_times = new_doc_click_times
+    )
 
   def available_documents(self, corpus_state):
     """The available_documents value."""
@@ -219,10 +253,15 @@ class CorpusWithTopicAndQuality(corpus.Corpus):
             spaces.Box(
                 low=np.zeros((self._num_docs, self._num_topics)),
                 high=np.ones((self._num_docs, self._num_topics)))),
-        doc_length=Space(
+                       #Notice: each user needs a isolated space for their click and recommended history, so the shape is (num_users, num_docs)
+        doc_recommend_times=Space(
             spaces.Box(
-                low=np.zeros(self._num_docs),
-                high=np.ones(self._num_docs) * np.Inf)))
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)), 
+        doc_click_times=Space(
+            spaces.Box(
+                low=np.zeros((self._num_users, self._num_docs)),
+                high=np.ones((self._num_users, self._num_docs)) * np.Inf, dtype=np.int32)),)
     return state_spec.prefixed_with("state").union(
         state_spec.prefixed_with("available_docs"))
 
