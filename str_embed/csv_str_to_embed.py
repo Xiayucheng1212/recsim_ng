@@ -17,10 +17,11 @@ df["combined"] = (
     "Title: " + df.headline.str.strip() + "; Content: " + df.short_description.str.strip()
 )
 #create group by encode number
+number_each_encode = 240
 result_dfs = []
 for encode, group in df.groupby('category_encoded'):
-    sampled_group = group.head(300).dropna()
-    sampled_group = sampled_group.head(240)
+    sampled_group = group.head(number_each_encode+60).dropna()
+    sampled_group = sampled_group.head(number_each_encode)
     result_dfs.append(sampled_group)
 df = pd.concat(result_dfs)
 
