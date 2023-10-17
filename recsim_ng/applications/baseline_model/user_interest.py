@@ -76,7 +76,7 @@ class InterestEvolutionUser(user.User):
       interest_noise = interest_update_noise_scale * tf.ones(
           self._num_users, dtype=tf.float32)
     interest_model = dynamic.ControlledLinearScaledGaussianStateModel(
-        dim=self._doc_embed_dim,
+        dim=self._num_topics,
         transition_scales=None,
         control_scales=interest_step_size *
         tf.ones(self._num_users, dtype=tf.float32),
@@ -104,12 +104,12 @@ class InterestEvolutionUser(user.User):
     chosen_doc_features = selector_lib.get_chosen(slate_docs, chosen_docs)
     # Calculate utilities.
     user_interests = previous_state.get('interest.state')
-    doc_features = chosen_doc_features.get('doc_features')
+    doc_vector = chosen_doc_features.get('doc_vector')
     # User interests are increased/decreased towards the consumed document's
     # topic proportinal to the document quality.
     direction = tf.expand_dims(
         chosen_doc_features.get('doc_quality'), axis=-1) * (
-            doc_features - user_interests)
+            doc_vector - user_interests)
     # TODO: need to remove consumed time, consider other indicators
     linear_update = self._interest_model.next_state(
         previous_state.get('interest'),
@@ -133,7 +133,7 @@ class InterestEvolutionUser(user.User):
     """The response value after the initial value."""
     affinities = self._affinity_model.affinities(  # pytype: disable=attribute-error  # trace-all-classes
         previous_state.get('interest.state'),
-        slate_docs.get('doc_features')).get('affinities')
+        slate_docs.get('doc_vector')).get('affinities')
     choice = self._choice_model.choice(affinities + 2.0)  # pytype: disable=attribute-error  # trace-all-classes
     # chosen_doc_idx = choice.get('choice')
     # Calculate consumption time. Negative quality documents generate more
@@ -150,7 +150,7 @@ class InterestEvolutionUser(user.User):
     interest_spec = ValueSpec(
         state=tensor_space(
             low=-10.0, high=10.0, shape=(
-                self._num_users, self._doc_embed_dim))).union(
+                self._num_users, self._num_topics))).union(
                     self._interest_model.specs().prefixed_with('linear_update'))
     state_spec = interest_spec.prefixed_with('interest')
     # Notice: no more consumed time
