@@ -13,7 +13,7 @@ class BaselineInterestEvolutionUserTest(tf.test.TestCase):
         self._num_users = 1
         # Notice: set the _num_topics to document feature vector length
         self._num_topics = 5
-        self._doc_embed_dim = 6
+        self._doc_embed_dim = self._num_topics 
         self._slate_size = 1
         self._no_click_mass = -np.Inf
         self._config = {
@@ -36,6 +36,7 @@ class BaselineInterestEvolutionUserTest(tf.test.TestCase):
         self._user = ie_user.InterestEvolutionUser(self._config, no_click_mass=self._no_click_mass)
         # Create a slate with one document only.
         doc_features = [[[1., 0., 0., 0., 0., 0.]]]
+        doc_vector = [[[1., 0., 0., 0., 0.]]]
         print("doc_feature:-----", tf.constant(doc_features).shape)
         slate_docs = Value(
             doc_id=ed.Deterministic(loc=tf.constant([[1]])),
@@ -43,10 +44,11 @@ class BaselineInterestEvolutionUserTest(tf.test.TestCase):
             doc_quality=ed.Deterministic(
                 loc=tf.constant([[0.]])),
             doc_features=ed.Deterministic(loc=tf.constant(doc_features)),
+            doc_vector=ed.Deterministic(loc=tf.constant(doc_vector)),
         )
         user_state = Value(
             state=ed.Deterministic(
-                loc=[[.1, .1, .1, .1, .1, .1]])).prefixed_with('interest')
+                loc=[[.1, .1, .1, .1, .1,]])).prefixed_with('interest')
         response = self.evaluate(
             self._user.next_response(user_state, slate_docs).as_dict)
         self.assertAllClose(

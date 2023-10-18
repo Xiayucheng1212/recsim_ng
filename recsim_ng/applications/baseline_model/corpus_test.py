@@ -17,12 +17,13 @@ class StaticCorpusTest(tf.test.TestCase):
     self._num_docs = 20
     self._num_topics = 42
     self._doc_embed_dim = 1536
-    self._data_path = './str_embed/data/embeddings.csv'
+    self._data_path = './str_embed/data'
     self._config = {
         'num_topics': self._num_topics,
         'num_docs': self._num_docs,
         'num_users': self._num_users,
-        'doc_embed_dim': self._doc_embed_dim
+        'doc_embed_dim': self._doc_embed_dim,
+        'data_path': self._data_path
     }
     self._corpus = static_corpus.CorpusWithEmbeddingsAndTopics(self._config)
 

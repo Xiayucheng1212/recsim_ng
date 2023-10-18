@@ -29,6 +29,7 @@ def create_linUCB_simulation_network(
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
+        'data_path': './str_embed/data'
     }
 
     if freeze_user:
@@ -64,6 +65,7 @@ def create_glm_contextual_simulation_network(
         'num_docs': num_docs,
         'slate_size': slate_size,
         'history_length': history_length,
+        'data_path': './str_embed/data'
     }
 
     if freeze_user:

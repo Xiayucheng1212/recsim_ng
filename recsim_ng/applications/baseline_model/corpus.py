@@ -36,14 +36,15 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
                config):
 
     super().__init__(config)
-    self._data_path = '../../../str_embed/data/embeddings.csv'
+    self._data_path = config["data_path"]
     self._col_name_embed = 'embedding'
     self._col_name_topic = 'category_encoded'
     self._num_users = config['num_users']
     self._doc_embed_dim = config['doc_embed_dim']
   
   def initial_state(self):
-    df = pd.read_csv(self._data_path)
+    df = pd.read_csv(self._data_path+"/embeddings.csv")
+
     #doc_feature is for recommender learning
     doc_features = tf.convert_to_tensor([ast.literal_eval(embed) for embed in df[self._col_name_embed]])
     doc_topic = tf.convert_to_tensor(df[self._col_name_topic])
