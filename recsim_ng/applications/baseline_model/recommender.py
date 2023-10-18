@@ -402,12 +402,13 @@ class CollabFilteringRecommender(recommender.BaseRecommender):
 @gin.configurable
 class LinearUCBRecommender(recommender.BaseRecommender):
     """A linear UCB based recommender implementation. See https://zhuanlan.zhihu.com/p/545790329 for more details."""
-    def __init__(self, config,alpha=0.5, name="LinearUCB"):
+    def __init__(self, config,alpha=0.5, epsilon=0.3, name="LinearUCB"):
       super().__init__(config, name=name)
       self._num_docs = config.get("num_docs")
       self._num_topics = config.get("num_topics")
       self._doc_embed_dim = config.get("doc_embed_dim")
       self._alpha = alpha
+      self._epsilon = epsilon
       self._A = []
       self._invA = []
       self._b = []
@@ -474,20 +475,25 @@ class LinearUCBRecommender(recommender.BaseRecommender):
         doc_features = tf.reshape(available_docs.get("doc_features"), [self._num_docs, 1, self._doc_embed_dim])
         # doc_ucb_scores shape: (num_users, num_docs)
         doc_ucb_scores = []
-        # Calculate the UCB score for each doc
-        for u in range(self._num_users):
-            doc_ucb_scores_per_user = []
-            for i in range(self._num_docs):
-                theta = tf.matmul(self._invA[u][i], self._b[u][i])
-                score = tf.matmul(doc_features[i], theta) + self._alpha * tf.sqrt(tf.matmul(tf.matmul(doc_features[i], self._invA[u][i]), doc_features[i], transpose_b=True))
-                doc_ucb_scores_per_user.append(score[0])
+        explt_or_explr = random.uniform(0.0, 1.0)
+        if explt_or_explr < self._epsilon: # Exploration Stage
+            random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
+            slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
+        else: # Exploitation Stage
+            # Calculate the UCB score for each doc
+            for u in range(self._num_users):
+                doc_ucb_scores_per_user = []
+                for i in range(self._num_docs):
+                    theta = tf.matmul(self._invA[u][i], self._b[u][i])
+                    score = tf.matmul(doc_features[i], theta) + self._alpha * tf.sqrt(tf.matmul(tf.matmul(doc_features[i], self._invA[u][i]), doc_features[i], transpose_b=True))
+                    doc_ucb_scores_per_user.append(score[0])
 
-            doc_ucb_scores.append(doc_ucb_scores_per_user)
-        doc_ucb_scores = tf.reshape(tf.convert_to_tensor(doc_ucb_scores, dtype=tf.float32), [self._num_users, self._num_docs])
-        # Choose the top-k highest smilarity docs
-        # doc_indices shape: (num_users, slate_size)
-        _, doc_indices = tf.math.top_k(doc_ucb_scores, k=self._slate_size)
-        slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
+                doc_ucb_scores.append(doc_ucb_scores_per_user)
+            doc_ucb_scores = tf.reshape(tf.convert_to_tensor(doc_ucb_scores, dtype=tf.float32), [self._num_users, self._num_docs])
+            # Choose the top-k highest smilarity docs
+            # doc_indices shape: (num_users, slate_size)
+            _, doc_indices = tf.math.top_k(doc_ucb_scores, k=self._slate_size)
+            slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
         return slate
 
     def specs(self):

@@ -73,7 +73,11 @@ class ClickThroughRateAsRewardMetrics(metrics.RecsMetricsBase):
     doc_recommend_times = corpus_state.get("doc_recommend_times") + 0.0001
     doc_click_times = corpus_state.get("doc_click_times")
     # Average CTR over each document
-    reward = tf.reduce_mean(tf.divide(doc_click_times, doc_recommend_times), axis=1)
+    every_item_ctr = tf.divide(doc_click_times, doc_recommend_times)
+    mask = tf.cast(tf.math.logical_and( every_item_ctr!= 0, ~tf.math.is_nan(every_item_ctr)), dtype=tf.float32)
+    reward = tf.reduce_sum(tf.divide(doc_click_times, doc_recommend_times), axis=1)
+    reward = reward / tf.reduce_sum(mask, axis=1)
+    
     cumulative_reward = previous_metrics.get("cumulative_reward")+reward
     return Value(
       reward = reward, cumulative_reward = cumulative_reward

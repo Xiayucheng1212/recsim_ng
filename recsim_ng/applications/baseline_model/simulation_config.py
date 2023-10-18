@@ -19,6 +19,7 @@ def create_linUCB_simulation_network(
     doc_embed_dim=1536,
     slate_size=2,
     freeze_user = True,
+    epsilon = 0.4,
 ):
     """Returns a network for the LinUCB simulation."""
     num_docs = 20
@@ -29,7 +30,8 @@ def create_linUCB_simulation_network(
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
-        'data_path': './str_embed/data'
+        'data_path': './str_embed/data',
+        'epsilon': epsilon,
     }
 
     if freeze_user:
