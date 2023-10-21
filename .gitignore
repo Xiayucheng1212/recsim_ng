@@ -2,3 +2,5 @@
 __pycache__/*
 recsim_ng/*.pyc
 recsim_ng/applications/baseline_model/*.pyc
+str_embed/data/*.csv
+str_embed/*.txt
