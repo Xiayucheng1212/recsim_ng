@@ -36,6 +36,7 @@ class StaticCorpusTest(tf.test.TestCase):
       doc_features = init_state_dict['doc_features']
       doc_recommend_times = init_state_dict['doc_recommend_times']
       doc_click_times = init_state_dict['doc_click_times']
+      doc_vector = init_state_dict['doc_vector']
       np.testing.assert_array_equal([self._config['num_docs']], np.shape(doc_id))
       np.testing.assert_array_equal([self._config['num_docs']],
                                     np.shape(doc_topic))
@@ -48,6 +49,7 @@ class StaticCorpusTest(tf.test.TestCase):
                                     np.shape(doc_recommend_times))
       np.testing.assert_array_equal([self._config['num_users'],self._config['num_docs']],
                                     np.shape(doc_click_times))
+      np.testing.assert_array_equal([self._config['num_docs'], self._config['num_topics']], np.shape(doc_vector))
   def test_next_state(self):
     init_state = self._corpus.initial_state()
     init_state_dict = self.evaluate(init_state.as_dict)
