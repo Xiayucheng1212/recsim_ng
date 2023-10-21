@@ -37,21 +37,21 @@ class CorpusWithEmbeddingsAndTopics(corpus.Corpus):
 
     super().__init__(config)
     self._data_path = config["data_path"]
-    self._col_name_embed = 'embedding'
+    self._col_name_embed = 'embedding_description'
     self._col_name_topic = 'category_encoded'
     self._num_users = config['num_users']
     self._doc_embed_dim = config['doc_embed_dim']
   
   def initial_state(self):
-    df = pd.read_csv(self._data_path+"/embeddings.csv").iloc[:self._num_docs]
+    df = pd.read_csv(self._data_path+"/embeddings_10k_v3.csv").iloc[:self._num_docs]
     df_vector = pd.read_csv(self._data_path+"/doc_vector_feature.csv").iloc[:self._num_docs]
     #doc_feature is for recommender learning
-    doc_features = tf.convert_to_tensor([ast.literal_eval(embed) for embed in df[self._col_name_embed]])
+    doc_features = tf.convert_to_tensor([ast.literal_eval(embed) for embed in df[self._col_name_embed]], dtype=tf.float32)
     doc_topic = tf.convert_to_tensor(df[self._col_name_topic])
     #doc_vector is for deciding users click or not
     # doc_vector = ed.Normal(
     #     loc=tf.one_hot(doc_topic, depth=self._num_topics), scale=0.7)
-    doc_vector = tf.convert_to_tensor(df_vector.values)
+    doc_vector = tf.convert_to_tensor(df_vector.values, dtype=tf.float32)
     topic_quality_means = tf.random.uniform([self._num_topics], minval=-1.0, maxval=1.0)
     doc_quality_var = 0.1
     doc_quality = ed.Normal(

@@ -16,7 +16,7 @@ def create_linUCB_simulation_network(
     alpha,
     num_users=5,
     num_topics=42,
-    doc_embed_dim=1536,
+    doc_embed_dim=2048,
     slate_size=2,
     freeze_user = True,
     epsilon = 0.4,
@@ -53,7 +53,7 @@ def create_glm_contextual_simulation_network(
     epsilon,
     num_users=1,
     num_topics = 42,
-    doc_embed_dim=1536,
+    doc_embed_dim=2048,
     slate_size = 2,
     history_length = 15,
     freeze_user = True

@@ -16,7 +16,7 @@ class StaticCorpusTest(tf.test.TestCase):
     self._num_users = 3
     self._num_docs = 20
     self._num_topics = 42
-    self._doc_embed_dim = 1536
+    self._doc_embed_dim = 2048
     self._data_path = './str_embed/data'
     self._config = {
         'num_topics': self._num_topics,
