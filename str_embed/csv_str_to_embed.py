@@ -5,7 +5,7 @@ from openai.embeddings_utils import get_embedding
 from sklearn.preprocessing import LabelEncoder
 label_encoder = LabelEncoder()
 print("?")
-openai.api_key = "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"
+openai.api_key = “”
 embedding_model1 = "text-embedding-ada-002"
 embedding_model2 = "text-similarity-babbage-001"
 embedding_encoding = "cl100k_base"
