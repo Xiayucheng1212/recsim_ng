@@ -7,7 +7,7 @@ from recsim_ng.core import network as network_lib
 from recsim_ng.lib.tensorflow import runtime
 import tensorflow as tf
 
-def run_simulation(num_runs, num_users, horizon, epsilon):
+def run_simulation(num_runs, num_users, horizon):
     tf.config.run_functions_eagerly(True)
     """Runs ecosystem simulation multiple times and measures social welfare.
 
@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, horizon, epsilon):
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users)
+        variables = simulation_config.create_random_simulation_network(num_users=num_users)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -54,14 +54,12 @@ def main(argv):
     num_runs = 3
     num_users = 1
     horizon = 5000
-    epsilon = 0.5
     t_begin = time.time()
-    reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
+    reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
-    # 0.47 -> new doc_vector but epsilon 1.0 -> 0.9
-    # 0.45 -> new doc_vector but epsilon 0.5 -> 0.45
-    # slate = 6 > 0.16
+
+
 if __name__ == '__main__':
   app.run(main)

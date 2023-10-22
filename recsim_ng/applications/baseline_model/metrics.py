@@ -72,11 +72,15 @@ class ClickThroughRateAsRewardMetrics(metrics.RecsMetricsBase):
     del user_state, user_response,slate_docs
     doc_recommend_times = corpus_state.get("doc_recommend_times") + 0.0001
     doc_click_times = corpus_state.get("doc_click_times")
-    # Average CTR over each document
-    every_item_ctr = tf.divide(doc_click_times, doc_recommend_times)
-    mask = tf.cast(tf.math.logical_and( every_item_ctr!= 0, ~tf.math.is_nan(every_item_ctr)), dtype=tf.float32)
+    recommend_mask = tf.cast(tf.math.logical_and(doc_recommend_times!= 0.0001, ~tf.math.is_nan(doc_recommend_times)), dtype=tf.float32)
     reward = tf.reduce_sum(tf.divide(doc_click_times, doc_recommend_times), axis=1)
-    reward = reward / tf.reduce_sum(mask, axis=1)
+    # Average CTR over each document
+    reward = reward / tf.reduce_sum(recommend_mask, axis=1)
+    # print("mask num", tf.reduce_sum(recommend_mask, axis=1))
+    # every_item_ctr = tf.divide(doc_click_times, doc_recommend_times)
+    # mask = tf.cast(tf.math.logical_and( every_item_ctr!= 0, ~tf.math.is_nan(every_item_ctr)), dtype=tf.float32)
+    # reward = tf.reduce_sum(tf.divide(doc_click_times, doc_recommend_times), axis=1)
+    # reward = reward / tf.reduce_sum(mask, axis=1)
     
     cumulative_reward = previous_metrics.get("cumulative_reward")+reward
     return Value(

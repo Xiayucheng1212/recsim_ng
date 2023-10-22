@@ -64,6 +64,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
     self._train_loss = keras.metrics.Mean(name='train_loss')
     # The slate_size here is changed to num_docs, since we need to check all affinities in the available_docs
     self._affinity_model = affinity_lib.TargetPointSimilarity((self._num_users,), self._num_docs, 'negative_cosine')
+    self._iteration = 0
 
    def initial_state(self):
      # Initializes the training loss and accuracy
@@ -85,13 +86,15 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
         training_x = slate_docs.as_dict["doc_features"][i]
         with tf.GradientTape() as tape:
             training_x_reshaped = tf.reshape(training_x, (self._slate_size, -1))
-            training_y_reshaped = tf.reshape(training_y, (-1, 1))
+            training_y_reshaped = tf.reshape(training_y, (self._slate_size))
             
-            pred = self._model[i](training_x_reshaped)
-            loss = keras.losses.binary_crossentropy(training_y_reshaped, pred)
-            grads = tape.gradient(loss, self._model[i].trainable_variables) 
-            self._optimizer[i].apply_gradients(zip(grads, self._model[i].trainable_variables))
+            pred = tf.reshape(self._model[i](training_x_reshaped), (self._slate_size))
+            loss = keras.losses.BinaryCrossentropy()(training_y_reshaped, pred)
+        grads = tape.gradient(loss, self._model[i].trainable_variables) 
+        self._optimizer[i].apply_gradients(zip(grads, self._model[i].trainable_variables))
      all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
+     if self._iteration % 200 == 0:
+        print("loss:", loss)
      return Value(user_interest=tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim]))
 
    def slate_docs(self, previous_state, user_obs,
@@ -99,6 +102,11 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      # TODO: Implement KNN with Milvus
      del user_obs
      del previous_state
+     self._iteration += 1
+     if self._epsilon > 0.0:
+        if self._iteration%500 == 0:
+           self._epsilon = self._epsilon * 0.9
+
      explt_or_explr = random.uniform(0.0, 1.0)
      if explt_or_explr < self._epsilon: # Exploration Stage
         random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
