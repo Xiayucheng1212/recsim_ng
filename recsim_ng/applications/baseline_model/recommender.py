@@ -82,13 +82,23 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
      # Although we only have 1 user, for the generality we still keep the for loop for num_users
      for i in range(self._num_users):
         chosen_doc_idx = user_response.get("choice")[i]
+        current_slate_size = self._slate_size
         training_y = tf.one_hot(chosen_doc_idx, depth = self._slate_size)
         training_x = slate_docs.as_dict["doc_features"][i]
+        # Add Oversampling data
+        if chosen_doc_idx != self._slate_size:
+            oversample_num = int(self._slate_size/2) # half of the slate_size is clicked docs
+            oversample_y = tf.ones((oversample_num))
+            training_y = tf.concat([training_y, oversample_y], axis=0)
+            oversample_x = tf.reshape(tf.repeat(training_x[chosen_doc_idx], repeats = oversample_num, axis=0), (-1, self._doc_embed_dim))
+            training_x = tf.concat([training_x, oversample_x], axis=0)
+            current_slate_size = self._slate_size + oversample_num
+
         with tf.GradientTape() as tape:
-            training_x_reshaped = tf.reshape(training_x, (self._slate_size, -1))
-            training_y_reshaped = tf.reshape(training_y, (self._slate_size))
+            training_x_reshaped = tf.reshape(training_x, (current_slate_size, -1))
+            training_y_reshaped = tf.reshape(training_y, (current_slate_size))
             
-            pred = tf.reshape(self._model[i](training_x_reshaped), (self._slate_size))
+            pred = tf.reshape(self._model[i](training_x_reshaped), (current_slate_size))
             loss = keras.losses.BinaryCrossentropy()(training_y_reshaped, pred)
         grads = tape.gradient(loss, self._model[i].trainable_variables) 
         self._optimizer[i].apply_gradients(zip(grads, self._model[i].trainable_variables))

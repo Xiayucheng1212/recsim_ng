@@ -53,7 +53,7 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 5000
+    horizon = 1000
     epsilon = 0.5
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
@@ -62,6 +62,8 @@ def main(argv):
     print('Average ctr: %f' %avg_ctr)
     # 0.47 -> new doc_vector but epsilon 1.0 -> 0.9
     # 0.45 -> new doc_vector but epsilon 0.5 -> 0.45
-    # slate = 6 > 0.16
+    # slate = 6 -> 0.16429 with ep = 0.8 horizon = 5000
+    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.1609
+    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.16303 with oversampling
 if __name__ == '__main__':
   app.run(main)

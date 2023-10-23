@@ -53,13 +53,14 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 5000
+    horizon = 1000
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
-
+    # slate = 6, horizon = 5000, num_doc= 9750 -> 0.1622
+    # slate = 6, horizon = 1000, num_doc= 9750 -> 0.160916
 
 if __name__ == '__main__':
   app.run(main)
