@@ -11,44 +11,12 @@ from recsim_ng.stories import recommendation_simulation as simulation
 
 Variable = variable.Variable
 
-@gin.configurable
-def create_cf_simulation_network(
-    num_users = 1,
-    num_topics = 42,
-    slate_size = 6,
-    doc_embed_dim= 2048,
-    freeze_user = True,
-    history_length = 15,
-):
-    num_docs = 9750 #9750
-    config = {
-        'num_topics': num_topics,
-        'doc_embed_dim': doc_embed_dim,
-        'num_users': num_users,
-        'num_docs': num_docs,
-        'slate_size': slate_size,
-        'history_length': history_length,
-        'data_path': './str_embed/data'
-    }
-    if freeze_user:
-        user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
-            config).initial_state()
-        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
-    else:
-        user_ctor = user_interest.InterestEvolutionUser
-
-    return simulation.recs_story(config, 
-                    user_ctor,
-                    corpus.CorpusWithEmbeddingsAndTopics,
-                    recommender.CollabFilteringRecommender,
-                    metrics.SuccessRateMetrics,
-                    metrics.ClickThroughRateAsRewardMetrics)
 
 @gin.configurable
 def create_random_simulation_network(
     num_users = 1,
     num_topics = 42,
-    slate_size = 6,
+    slate_size = 2,
     doc_embed_dim= 2048,
     freeze_user = True,
 ):
@@ -119,7 +87,7 @@ def create_glm_contextual_simulation_network(
     num_users=1,
     num_topics = 42,
     doc_embed_dim=2048,
-    slate_size = 6, # 10 -> 0.1 avg ctr
+    slate_size = 2, # 10 -> 0.1 avg ctr
     history_length = 15,
     freeze_user = True
 ):
