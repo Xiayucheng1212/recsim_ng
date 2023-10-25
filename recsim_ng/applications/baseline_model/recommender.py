@@ -458,21 +458,27 @@ class LinearUCBRecommender(recommender.BaseRecommender):
         """The state value after the initial value."""
         del previous_state
         chosen_doc_idx = user_response.get("choice").numpy()
-
-        if chosen_doc_idx != self._slate_size:
-            chosen_real_id = slate_docs.get("doc_id").numpy()[np.arange(self._num_users), chosen_doc_idx]
-        else:
-            chosen_real_id = slate_docs.get("doc_id").numpy()
+        # chosen_doc_idx shape: (num_users, 1)
+        chosen_real_id = []
+        for i in range(self._num_users):
+            # User choose one document from the slate_docs
+            if chosen_doc_idx[i] != self._slate_size:
+               # chosen_real_id = slate_docs[chosen_doc_idx] - 1
+               chosen_real_id.append([slate_docs.get("doc_id").numpy()[i][chosen_doc_idx[i]] - 1])
+            # User choose none of the documents from the slate_docs
+            else:
+               chosen_real_id.append(slate_docs.get("doc_id").numpy()[i] - 1)
         # chosen real id start from 0, so we need to -1 from the slate_doc's doc_id
-        chosen_real_id = np.reshape(chosen_real_id, (self._num_users, -1))-1
-
         for u in range(self._num_users):
             # we assume reward r = 1.0 as clicked and r = -1.0 as not clicked
             reward = 1.0 if chosen_doc_idx[u] != self._slate_size else -1.0
             chosen_doc_idx_per_user = chosen_doc_idx[u] if chosen_doc_idx[u] != self._slate_size else np.arange(self._slate_size)
             chosen_doc_idx_per_user = np.reshape(chosen_doc_idx_per_user, (1, -1)) #(one user, slate_size) or (one user, 1)
+            # slate_docs_per_user shape: (1, slate_size, doc_embed_dim)
+            slate_docs_per_user = Value(
+               doc_features = tf.reshape(slate_docs.get("doc_features")[u], [1, -1, self._doc_embed_dim]))   
             # chosen_doc_features shape: (slate_size or 1, 1, doc_embed_dim)
-            chosen_doc_features_per_user = tf.reshape(selector_lib.get_chosen(slate_docs, chosen_doc_idx_per_user).get("doc_features"), [-1, 1, self._doc_embed_dim])
+            chosen_doc_features_per_user = tf.reshape(selector_lib.get_chosen(slate_docs_per_user, chosen_doc_idx_per_user).get("doc_features"), [-1, 1, self._doc_embed_dim])
             # Chosen_doc_features_per_user <-> chosen_real_id_per_user is one-to-one mapping
             for i in range(len(chosen_real_id[u])):
                 A_update = tf.matmul(chosen_doc_features_per_user[i], chosen_doc_features_per_user[i], transpose_a=True)

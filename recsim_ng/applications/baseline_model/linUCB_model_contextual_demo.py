@@ -51,7 +51,7 @@ def run_simulation(num_runs, num_users, horizon):
 def main(argv):
     del argv
     num_runs = 3
-    num_users = 1
+    num_users = 2
     horizon = 1000
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon)
