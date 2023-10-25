@@ -28,6 +28,8 @@ from recsim_ng.entities.state_models import state
 from recsim_ng.lib.tensorflow import field_spec
 import tensorflow as tf
 import tensorflow_probability as tfp
+import random
+import edward2 as ed
 
 tfd = tfp.distributions
 Constructor = Callable[Ellipsis, object]
@@ -40,6 +42,32 @@ def tensor_space(low = -np.Inf,
                  high = np.Inf,
                  shape = ()):
   return Space(spaces.Box(low=low, high=high, shape=shape))
+
+class UserWithInterestedTopics(object):
+  """Defines User with interested topics. """
+
+  def __init__(self, config):
+    self._slate_size = config['slate_size']
+    self._num_topics = config['num_topics']
+    self._num_users = config['num_users']
+    # The more interested topics means the number interested topics is larger than the slate size
+    self._more_interested_topics = config['more_interested_topics']
+  
+  def initial_state(self):
+    if self._more_interested_topics:
+      interested_topics_num = int(self._slate_size*1.5)
+    else:
+      interested_topics_num = int(self._slate_size*0.5)
+    
+    all_users_interested_topics = []
+    for i in range(self._num_users):
+      interested_topics = np.zeros(self._num_topics, dtype=np.float32)
+      interested_topics[np.random.choice(self._num_topics, interested_topics_num, replace=False)] = 1
+      all_users_interested_topics.append(interested_topics)
+    # Set the mean value of each user's interest to be the all_users_interested_topics
+    interest_initial_state = Value(state = ed.Normal(loc=tf.convert_to_tensor(all_users_interested_topics), scale=tf.ones([self._num_users, self._num_topics])))
+    print("User interest: ",interest_initial_state.get('state'))
+    return interest_initial_state
 
 @gin.configurable
 class InterestEvolutionUser(user.User):
@@ -58,7 +86,7 @@ class InterestEvolutionUser(user.User):
       interest_step_size = 0.1,
       reset_users_if_timed_out = False,
       interest_update_noise_scale = None,
-      initial_interest_generator = None,
+      initial_interest_generator:UserWithInterestedTopics = None,
       max_user_affinity = 10.0):
     super().__init__(config)
     self._config = config
@@ -89,12 +117,12 @@ class InterestEvolutionUser(user.User):
   def initial_state(self):
     """The initial state value."""
     if self._interest_generator is not None:
-      interest_initial_state = self._initial_interest_generator.initial_state()
+      interest_initial_state = self._interest_generator.initial_state()
     else:
       interest_initial_state = self._interest_model.initial_state()
-    interest_initial_state = Value(
-        state=tf.identity(interest_initial_state.get('state'))).union(
-            interest_initial_state.prefixed_with('linear_update'))
+      interest_initial_state = Value(
+          state=tf.identity(interest_initial_state.get('state'))).union(
+              interest_initial_state.prefixed_with('linear_update'))
     return interest_initial_state.prefixed_with('interest')
 
   def next_state(self, previous_state, user_response,
@@ -147,7 +175,13 @@ class InterestEvolutionUser(user.User):
     return choice
 
   def specs(self):
-    interest_spec = ValueSpec(
+    # TODO: interest_spec only need interest + state as prefix
+    if self._interest_generator is not None:
+      interest_spec = ValueSpec(
+        state = tensor_space(low=-10.0, high=10.0, shape=(self._num_users, self._num_topics))
+      )
+    else:
+      interest_spec = ValueSpec(
         state=tensor_space(
             low=-10.0, high=10.0, shape=(
                 self._num_users, self._num_topics))).union(
@@ -163,9 +197,10 @@ class InterestEvolutionUser(user.User):
 class StaticUser(InterestEvolutionUser):
   """Defines a static user with state passed from outside."""
 
-  def __init__(self, config, static_state):
+  def __init__(self, config, static_state, interest_generator = None):
     super().__init__(config)
     self._static_state = static_state
+    self._interest_generator = interest_generator
 
   def initial_state(self):
     """The initial state value."""
@@ -177,6 +212,5 @@ class StaticUser(InterestEvolutionUser):
     del user_response
     del slate_docs
     return previous_state.map(tf.identity)
-
 
 

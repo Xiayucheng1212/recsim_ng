@@ -18,10 +18,11 @@ Variable = variable.Variable
 def create_cf_simulation_network(
     num_users = 1,
     num_topics = 42,
-    slate_size = 2,
+    slate_size = 6,
     doc_embed_dim= 2048,
     freeze_user = True,
-    history_length = 15
+    history_length = 15,
+    more_interested_topics = None
 ):
   tf.config.run_functions_eagerly(True)
   """Returns a network for interests evolution simulation."""
@@ -34,14 +35,21 @@ def create_cf_simulation_network(
         'slate_size': slate_size,
         'data_path': './str_embed/data',
         # History length for user representation in recommender.
-        'history_length': history_length
+        'history_length': history_length,
+        'more_interested_topics': more_interested_topics
   }
+
+  if  more_interested_topics != None:
+      initial_interest_generator = user_interest.UserWithInterestedTopics(config)
+  else: 
+      initial_interest_generator = None
+
   if freeze_user:
-        user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
-            config).initial_state()
-        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+      user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
+          config, initial_interest_generator=initial_interest_generator).initial_state()
+      user_ctor = lambda config: user_interest.StaticUser(config, user_init(config), interest_generator=initial_interest_generator)
   else:
-        user_ctor = user_interest.InterestEvolutionUser
+      user_ctor = user_interest.InterestEvolutionUser
   var_fn = lambda: simulation.recs_story(  # pylint: disable=g-long-lambda
       config, user_ctor, corpus.CorpusWithEmbeddingsAndTopics,
       functools.partial(recommender.CollabFilteringRecommender),\
@@ -56,9 +64,10 @@ def create_cf_simulation_network(
 def create_random_simulation_network(
     num_users = 1,
     num_topics = 42,
-    slate_size = 2,
+    slate_size = 6,
     doc_embed_dim= 2048,
     freeze_user = True,
+    more_interested_topics = None
 ):
     num_docs = 9750 #9750
     config = {
@@ -67,13 +76,18 @@ def create_random_simulation_network(
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
-        'data_path': './str_embed/data'
+        'data_path': './str_embed/data',
+        'more_interested_topics': more_interested_topics
     }
+    if  more_interested_topics != None:
+        initial_interest_generator = user_interest.UserWithInterestedTopics(config)
+    else: 
+        initial_interest_generator = None
 
     if freeze_user:
         user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
-            config).initial_state()
-        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+            config, initial_interest_generator=initial_interest_generator).initial_state()
+        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config), interest_generator=initial_interest_generator)
     else:
         user_ctor = user_interest.InterestEvolutionUser
 
@@ -90,12 +104,13 @@ def create_linUCB_simulation_network(
     num_users=5,
     num_topics=42,
     doc_embed_dim=2048,
-    slate_size=2,
+    slate_size=6,
     freeze_user = True,
     epsilon = 0.4,
+    more_interested_topics = None
 ):
     """Returns a network for the LinUCB simulation."""
-    num_docs = 20
+    num_docs = 9750
     config = {
         'alpha': alpha,
         'num_topics': num_topics,
@@ -105,12 +120,18 @@ def create_linUCB_simulation_network(
         'slate_size': slate_size,
         'data_path': './str_embed/data',
         'epsilon': epsilon,
+        'more_interested_topics': more_interested_topics
     }
+
+    if  more_interested_topics != None:
+        initial_interest_generator = user_interest.UserWithInterestedTopics(config)
+    else: 
+        initial_interest_generator = None
 
     if freeze_user:
         user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
-            config).initial_state()
-        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+            config, initial_interest_generator=initial_interest_generator).initial_state()
+        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config), interest_generator=initial_interest_generator)
     else:
         user_ctor = user_interest.InterestEvolutionUser
 
@@ -127,9 +148,9 @@ def create_glm_contextual_simulation_network(
     num_users=1,
     num_topics = 42,
     doc_embed_dim=2048,
-    slate_size = 2, # 10 -> 0.1 avg ctr
-    history_length = 15,
-    freeze_user = True
+    slate_size = 6, # 10 -> 0.1 avg ctr
+    freeze_user = True,
+    more_interested_topics = None
 ):
     num_docs = 9750
     config = {
@@ -139,14 +160,18 @@ def create_glm_contextual_simulation_network(
         'num_users': num_users,
         'num_docs': num_docs,
         'slate_size': slate_size,
-        'history_length': history_length,
-        'data_path': './str_embed/data'
+        'data_path': './str_embed/data',
+        'more_interested_topics': more_interested_topics
     }
+    if  more_interested_topics != None:
+        initial_interest_generator = user_interest.UserWithInterestedTopics(config)
+    else: 
+        initial_interest_generator = None
 
     if freeze_user:
         user_init = lambda config: user_interest.InterestEvolutionUser(  # pylint: disable=g-long-lambda
-            config).initial_state()
-        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config))
+            config, initial_interest_generator=initial_interest_generator).initial_state()
+        user_ctor = lambda config: user_interest.StaticUser(config, user_init(config), interest_generator=initial_interest_generator)
     else:
         user_ctor = user_interest.InterestEvolutionUser
 

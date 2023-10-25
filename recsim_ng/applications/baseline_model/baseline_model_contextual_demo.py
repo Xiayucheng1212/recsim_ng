@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, horizon, epsilon):
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users)
+        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users, more_interested_topics = False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -53,8 +53,8 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 1000
-    epsilon = 0.5
+    horizon = 100
+    epsilon = 0.4
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
