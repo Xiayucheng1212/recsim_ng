@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, horizon):
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_random_simulation_network(num_users=num_users)
+        variables = simulation_config.create_random_simulation_network(num_users=num_users, more_interested_topics=False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function

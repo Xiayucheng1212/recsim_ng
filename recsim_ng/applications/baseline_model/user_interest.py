@@ -65,7 +65,7 @@ class UserWithInterestedTopics(object):
       interested_topics[np.random.choice(self._num_topics, interested_topics_num, replace=False)] = 1
       all_users_interested_topics.append(interested_topics)
     # Set the mean value of each user's interest to be the all_users_interested_topics
-    interest_initial_state = Value(state = ed.Normal(loc=tf.convert_to_tensor(all_users_interested_topics), scale=tf.ones([self._num_users, self._num_topics])))
+    interest_initial_state = Value(state = ed.Normal(loc=tf.convert_to_tensor(all_users_interested_topics), scale=0.5*tf.ones([self._num_users, self._num_topics])))
     print("User interest: ",interest_initial_state.get('state'))
     return interest_initial_state
 
