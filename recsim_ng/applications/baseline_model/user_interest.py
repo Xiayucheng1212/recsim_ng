@@ -120,6 +120,7 @@ class InterestEvolutionUser(user.User):
       interest_initial_state = self._interest_generator.initial_state()
     else:
       interest_initial_state = self._interest_model.initial_state()
+      print("Without interested topics user: ", interest_initial_state.get('state'))
       interest_initial_state = Value(
           state=tf.identity(interest_initial_state.get('state'))).union(
               interest_initial_state.prefixed_with('linear_update'))

@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, horizon):
     sum_user_creward = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_linUCB_simulation_network(alpha=0.25, num_users=num_users)
+        variables = simulation_config.create_linUCB_simulation_network(alpha=0.25, num_users=num_users, more_interested_topics=False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -51,8 +51,8 @@ def run_simulation(num_runs, num_users, horizon):
 def main(argv):
     del argv
     num_runs = 3
-    num_users = 2
-    horizon = 1000
+    num_users = 1
+    horizon = 100
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
