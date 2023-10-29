@@ -51,7 +51,7 @@ def distributed_train_step(
         last_state, field_name='reward')
     ctr_reward = single_run_reward.get("final metrics state")
     # --------------------------------
-    last_metric_value = last_state['final metrics state'].get(metric_to_optimize)
+    last_metric_value = last_state['metrics state'].get(metric_to_optimize)
     log_prob = last_state['slate docs_log_prob_accum'].get('doc_ranks')
     objective = -tf.tensordot(tf.stop_gradient(last_metric_value), log_prob, 1)
     objective /= float(global_batch)
@@ -114,7 +114,7 @@ def run_simulation(
   user_ctime = 0.0
   ctr = 0.0
   for i in range(num_training_steps):
-    _ ,_ ,_ , user_ctime, ctr=train_step()
-  
+    _ ,_ ,_ , now_user_ctime, ctr=train_step()
+    user_ctime+=now_user_ctime
   print("final_reward:", ctr)
   return user_ctime/(horizon*num_training_steps) , ctr
