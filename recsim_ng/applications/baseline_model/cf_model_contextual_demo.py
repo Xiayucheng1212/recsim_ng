@@ -13,7 +13,7 @@ def main(argv):
     num_runs = 3
     num_training_steps = 20
     num_users = 1
-    horizon = 50
+    horizon = 100
     history_length = 15
     t_begin = time.time()
     # -----------------------------------------
@@ -31,7 +31,7 @@ def main(argv):
         learning_rate=1e-4,
         simulation_variables=variables,
         trainable_variables=trainable_variables,
-        metric_to_optimize='cumulative_reward')
+        metric_to_optimize='reward')
 
         sum_ctr += results[1]
         sum_user_creward += results[0]

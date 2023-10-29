@@ -114,7 +114,7 @@ def run_simulation(
   user_ctime = 0.0
   ctr = 0.0
   for i in range(num_training_steps):
-    _ ,_ ,_ , user_ctime, ctr=train_step()
-  
+    _ ,_ ,_ , now_user_ctime, ctr=train_step()
+    user_ctime+=now_user_ctime
   print("final_reward:", ctr)
   return user_ctime/(horizon*num_training_steps) , ctr
