@@ -53,17 +53,30 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 100
-    epsilon = 0.4
+    horizon = 5000
+    epsilon = 0.8
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
-    # 0.47 -> new doc_vector but epsilon 1.0 -> 0.9
-    # 0.45 -> new doc_vector but epsilon 0.5 -> 0.45
-    # slate = 6 -> 0.16429 with ep = 0.8 horizon = 5000
-    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.1609
-    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.16303 with oversampling
+    # Epsilon setup:
+    # more interested topics = None
+    # 100 0.4 check
+    # 500 0.4 check
+    # 1000 0.5 check
+    # 5000 0.9 check
+
+    # more interested topics = False
+    # 100 0.3
+    # 500 0.3
+    # 1000 0.3 check
+    # 5000 0.7 
+
+    # more interested topics = True
+    # 100 0.4 check
+    # 500 0.4 check
+    # 1000 0.4 check
+    # 5000 0.8 check 
 if __name__ == '__main__':
   app.run(main)
