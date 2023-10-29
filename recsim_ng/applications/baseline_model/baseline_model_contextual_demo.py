@@ -53,8 +53,8 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 500
-    epsilon = 0.3
+    horizon = 5000
+    epsilon = 0.8
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
@@ -74,9 +74,9 @@ def main(argv):
     # 5000 0.7 
 
     # more interested topics = True
-    # 100 0.3
-    # 500 0.3 check
+    # 100 0.4 check
+    # 500 0.4 check
     # 1000 0.4 check
-    # 5000 0.7 check 
+    # 5000 0.8 check 
 if __name__ == '__main__':
   app.run(main)
