@@ -44,14 +44,24 @@ def distributed_train_step(
   with tf.GradientTape() as tape:
     last_state = tf_runtime.execute(num_steps=horizon)#TODO
     # --------------------------------
+    # doc_recommend_times = network_lib.find_field(
+    #     last_state, field_name='doc_recommend_times')
+    # doc_recommend_times = doc_recommend_times.get("corpus state") + 0.0001
+    # doc_click_times = network_lib.find_field(
+    #     last_state, field_name='doc_click_times')
+    # doc_click_times = doc_click_times.get('corpus state')
+    
+    
     crewards = network_lib.find_field(
         last_state, field_name='cumulative_reward')
     success_reward = crewards.get("metrics state")
     single_run_reward = network_lib.find_field(
         last_state, field_name='reward')
     ctr_reward = single_run_reward.get("final metrics state")
+    success_reward = tf.reduce_mean(success_reward)
+    ctr_reward = tf.reduce_mean(ctr_reward)
     # --------------------------------
-    last_metric_value = last_state['metrics state'].get(metric_to_optimize)
+    last_metric_value = last_state['final metrics state'].get(metric_to_optimize)
     log_prob = last_state['slate docs_log_prob_accum'].get('doc_ranks')
     objective = -tf.tensordot(tf.stop_gradient(last_metric_value), log_prob, 1)
     objective /= float(global_batch)
@@ -59,7 +69,7 @@ def distributed_train_step(
   if optimizer:
     grads_and_vars = list(zip(grads, trainable_variables))
     optimizer.apply_gradients(grads_and_vars)
-  return grads, objective, tf.reduce_mean(last_metric_value), success_reward[0], ctr_reward[0]
+  return grads, objective, tf.reduce_mean(last_metric_value), success_reward, ctr_reward
 
 
 def make_runtime(variables):
@@ -114,7 +124,8 @@ def run_simulation(
   user_ctime = 0.0
   ctr = 0.0
   for i in range(num_training_steps):
-    _ ,_ ,_ , now_user_ctime, ctr=train_step()
+    _ ,_ ,_ , now_user_ctime, now_ctr=train_step()
     user_ctime+=now_user_ctime
-  print("final_reward:", ctr)
-  return user_ctime/(horizon*num_training_steps) , ctr
+    ctr+=now_ctr
+  print("final_reward:", ctr/num_training_steps)
+  return user_ctime/(horizon*num_training_steps) , ctr/num_training_steps

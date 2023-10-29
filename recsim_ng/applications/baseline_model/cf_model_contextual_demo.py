@@ -12,8 +12,8 @@ def main(argv):
     del argv
     num_runs = 3
     num_training_steps = 20
-    num_users = 1
-    horizon = 100
+    num_users = 3
+    horizon = 50
     history_length = 15
     t_begin = time.time()
     # -----------------------------------------

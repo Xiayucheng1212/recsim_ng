@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, horizon, epsilon):
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users, more_interested_topics = True)
+        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users, more_interested_topics = False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -37,10 +37,10 @@ def run_simulation(num_runs, num_users, horizon, epsilon):
                 single_run_reward = network_lib.find_field(
                     final_value, field_name='reward')
                 ctr_reward = single_run_reward.get("final metrics state")
-                
-                
-                print("final_reward:", ctr_reward[0])
-                return success_reward[0] / horizon, ctr_reward[0]
+                success_reward = tf.reduce_mean(success_reward)
+                ctr_reward = tf.reduce_mean(ctr_reward)
+                print("final_reward:", ctr_reward)
+                return success_reward / horizon, ctr_reward
         results = run_one_simulation()
         sum_ctr += results[1]
         sum_user_ctime += results[0]
@@ -53,30 +53,17 @@ def main(argv):
     del argv
     num_runs = 3
     num_users = 1
-    horizon = 500
-    epsilon = 0.3
+    horizon = 100
+    epsilon = 0.4
     t_begin = time.time()
     reward_mean, avg_ctr = run_simulation(num_runs, num_users, horizon, epsilon)
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
-    # Epsilon setup:
-    # more interested topics = None
-    # 100 0.4 check
-    # 500 0.4 check
-    # 1000 0.5 check
-    # 5000 0.9 check
-
-    # more interested topics = False
-    # 100 0.3
-    # 500 0.3
-    # 1000 0.3 check
-    # 5000 0.7 
-
-    # more interested topics = True
-    # 100 0.3
-    # 500 0.3 check
-    # 1000 0.4 check
-    # 5000 0.7 check 
+    # 0.47 -> new doc_vector but epsilon 1.0 -> 0.9
+    # 0.45 -> new doc_vector but epsilon 0.5 -> 0.45
+    # slate = 6 -> 0.16429 with ep = 0.8 horizon = 5000
+    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.1609
+    # slate = 6 -> with ep = 0.5 horizon = 1000 -> 0.16303 with oversampling
 if __name__ == '__main__':
   app.run(main)

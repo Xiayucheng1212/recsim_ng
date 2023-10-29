@@ -37,9 +37,10 @@ def run_simulation(num_runs, num_users, horizon):
                 single_run_reward = network_lib.find_field(
                     final_value, field_name='reward')
                 ctr_reward = single_run_reward.get("final metrics state")
-                
-                print("ctr_reward: ", ctr_reward[0])
-                return success_reward[0] / horizon, ctr_reward[0]
+                success_reward = tf.reduce_mean(success_reward)
+                ctr_reward = tf.reduce_mean(ctr_reward)
+                print("ctr_reward: ", ctr_reward)
+                return success_reward / horizon, ctr_reward
         results = run_one_simulation()
         sum_user_creward += results[0]
         sum_ctr += results[1]
