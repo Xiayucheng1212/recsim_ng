@@ -53,8 +53,8 @@ def create_cf_simulation_network(
   var_fn = lambda: simulation.recs_story(  # pylint: disable=g-long-lambda
       config, user_ctor, corpus.CorpusWithEmbeddingsAndTopics,
       functools.partial(recommender.CollabFilteringRecommender),\
-      metrics.SuccessRateMetrics,
-      metrics.ClickThroughRateAsRewardMetrics)
+        metrics.UtilityMetrics,
+        metrics.SuccessRateMetrics)
   simulation_vars, trainable_vars = entity.story_with_trainable_variables(
       var_fn)
   return simulation_vars, trainable_vars['Recommender']
@@ -95,8 +95,8 @@ def create_random_simulation_network(
                     user_ctor,
                     corpus.CorpusWithEmbeddingsAndTopics,
                     recommender.RandomRecommender,
-                    metrics.SuccessRateMetrics,
-                    metrics.ClickThroughRateAsRewardMetrics)
+                    metrics.UtilityMetrics,
+                    metrics.SuccessRateMetrics)
 
 @gin.configurable
 def create_linUCB_simulation_network(
@@ -179,8 +179,8 @@ def create_glm_contextual_simulation_network(
                     user_ctor,
                     corpus.CorpusWithEmbeddingsAndTopics,
                     recommender.GeneralizedLinearRecommender,
-                    metrics.SuccessRateMetrics,
-                    metrics.ClickThroughRateAsRewardMetrics)
+                    metrics.UtilityMetrics,
+                    metrics.SuccessRateMetrics) 
 
 @gin.configurable
 def create_one_user_glm_simulation_network(

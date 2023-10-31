@@ -21,6 +21,8 @@ import numpy as np
 from recsim_ng.core import value
 from recsim_ng.entities.recommendation import metrics
 from recsim_ng.lib.tensorflow import field_spec
+from recsim_ng.entities.choice_models import selectors as selector_lib
+from recsim_ng.entities.choice_models import affinities as affinity_lib
 import tensorflow as tf
 
 Value = value.Value
@@ -124,6 +126,50 @@ class ConsumedTimeAsRewardMetrics(metrics.RecsMetricsBase):
             loc=previous_metrics.get("cumulative_reward") + reward))
 
   def specs(self):
+    return ValueSpec(
+        reward=Space(
+            spaces.Box(
+                low=np.zeros(self._num_users),
+                high=np.array([np.Inf] * self._num_users))),
+        cumulative_reward=Space(
+            spaces.Box(
+                low=np.zeros(self._num_users),
+                high=np.array([np.Inf] *
+                              self._num_users)))).prefixed_with("state")
+
+class UtilityMetrics(metrics.RecsMetricsBase):
+   def __init__(self, config):
+      self._num_users = config['num_users']
+      self._num_docs = config['num_docs']
+
+      self._affinity_model = affinity_lib.TargetPointSimilarity((self._num_users,), self._num_docs, 'negative_cosine')
+
+   def initial_metrics(self):
+      return Value(
+         reward=ed.Deterministic(loc=tf.zeros([self._num_users])),
+         cumulative_reward=ed.Deterministic(loc=tf.zeros([self._num_users]))
+      )
+   
+   def next_metrics(self, previous_metrics, corpus_state, user_state, user_response, slate_docs):
+        del corpus_state
+        user_interest = user_state.get("interest").get("state")
+        chosen_idx = user_response.get("choice")
+        chosen_doc_vector = selector_lib.get_chosen(slate_docs, chosen_idx).get("doc_vector")
+        affinities = self._affinity_model.affinities( 
+            # user_interest: (num_users, n_features)
+            user_interest,
+            # doc_features: (slate_size, n_features)
+            chosen_doc_vector, False).get('affinities') + 2.0
+        reward = ed.Normal(
+              loc=affinities, scale=np.float32(np.maximum(1e-6, 0.1)), validate_args=True)
+        
+        return Value(
+           reward = reward,
+            cumulative_reward=ed.Deterministic(
+                loc=previous_metrics.get("cumulative_reward") + reward)
+        )
+   
+   def specs(self):
     return ValueSpec(
         reward=Space(
             spaces.Box(

@@ -51,15 +51,12 @@ def distributed_train_step(
     #     last_state, field_name='doc_click_times')
     # doc_click_times = doc_click_times.get('corpus state')
     
-    
-    crewards = network_lib.find_field(
-        last_state, field_name='cumulative_reward')
-    success_reward = crewards.get("metrics state")
-    single_run_reward = network_lib.find_field(
-        last_state, field_name='reward')
-    ctr_reward = single_run_reward.get("final metrics state")
+    rewards = network_lib.find_field(
+      last_state, field_name='cumulative_reward')
+    utility_reward = rewards.get("metrics state")
+    success_reward = rewards.get("final metrics state")
+    utility_reward = tf.reduce_mean(utility_reward)
     success_reward = tf.reduce_mean(success_reward)
-    ctr_reward = tf.reduce_mean(ctr_reward)
     # --------------------------------
     last_metric_value = last_state['final metrics state'].get(metric_to_optimize)
     log_prob = last_state['slate docs_log_prob_accum'].get('doc_ranks')
@@ -69,7 +66,7 @@ def distributed_train_step(
   if optimizer:
     grads_and_vars = list(zip(grads, trainable_variables))
     optimizer.apply_gradients(grads_and_vars)
-  return grads, objective, tf.reduce_mean(last_metric_value), success_reward, ctr_reward
+  return grads, objective, tf.reduce_mean(last_metric_value), success_reward, utility_reward
 
 
 def make_runtime(variables):
@@ -121,11 +118,11 @@ def run_simulation(
   train_step = make_train_step(tf_runtime, horizon, global_batch,
                                trainable_variables, metric_to_optimize,
                                optimizer)
-  user_ctime = 0.0
-  ctr = 0.0
+  success_rate = 0.0
+  utility = 0.0
   for i in range(num_training_steps):
-    _ ,_ ,_ , now_user_ctime, now_ctr=train_step()
-    user_ctime+=now_user_ctime
-    ctr+=now_ctr
-  print("final_reward:", ctr/num_training_steps)
-  return user_ctime/(horizon*num_training_steps) , ctr/num_training_steps
+    _ ,_ ,_ , now_success_rate, now_utility=train_step()
+    success_rate+=now_success_rate
+    utility+=now_utility
+  print("success rate:", success_rate/(horizon*num_training_steps))
+  return success_rate/(horizon*num_training_steps) , utility, utility/(num_training_steps * horizon)

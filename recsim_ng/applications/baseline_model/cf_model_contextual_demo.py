@@ -17,8 +17,9 @@ def main(argv):
     history_length = 15
     t_begin = time.time()
     # -----------------------------------------
-    sum_user_creward = 0.0
-    sum_ctr = 0.0
+    sum_successrate = 0.0
+    sum_utility = 0.0
+    sum_utility_horizon_mean = 0.0
     for _ in range(num_runs):
         variables, trainable_variables = (
         simulation_config.create_cf_simulation_network(
@@ -33,16 +34,18 @@ def main(argv):
         trainable_variables=trainable_variables,
         metric_to_optimize='reward')
 
-        sum_ctr += results[1]
-        sum_user_creward += results[0]
+        sum_utility += results[1]
+        sum_utility_horizon_mean += results[0]
+        sum_successrate += results[2]
     
-    creward_mean = sum_user_creward / num_runs
-    avg_ctr = sum_ctr / num_runs
-
+    success_rate = sum_successrate / num_runs
+    utility_mean = sum_utility / num_runs
+    utility_horizon_mean = sum_utility_horizon_mean / num_runs
     # -----------------------------------------
     print('Elapsed time: %.3f seconds' %(time.time() - t_begin))
-    print('Average reward: %f' %creward_mean)
-    print('Average ctr: %f' %avg_ctr)
+    print('Average successrate: %f' %success_rate)
+    print('Average cumulate utility: %f' %utility_mean)
+    print('Average utility: %f' %utility_horizon_mean)
     # 0.47 -> new doc_vector but epsilon 1.0 -> 0.9
     # 0.45 -> new doc_vector but epsilon 0.5 -> 0.45
     # slate = 6 -> 0.16429 with ep = 0.8 horizon = 5000
