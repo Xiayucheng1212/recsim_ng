@@ -107,8 +107,8 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             loss = keras.losses.BinaryCrossentropy()(training_y_reshaped, pred)
         grads = tape.gradient(loss, self._model[i].trainable_variables) 
         self._optimizer[i].apply_gradients(zip(grads, self._model[i].trainable_variables))
-        if self._iteration % 200 == 0:
-            print("loss:", loss)
+        # if self._iteration % 200 == 0:
+        #     print("loss:", loss)
      all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
 
      return Value(user_interest=tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim]))

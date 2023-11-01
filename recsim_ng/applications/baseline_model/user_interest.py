@@ -66,7 +66,7 @@ class UserWithInterestedTopics(object):
       all_users_interested_topics.append(interested_topics)
     # Set the mean value of each user's interest to be the all_users_interested_topics
     interest_initial_state = Value(state = ed.Normal(loc=tf.convert_to_tensor(all_users_interested_topics), scale=0.5*tf.ones([self._num_users, self._num_topics])))
-    print("User interest: ",interest_initial_state.get('state'))
+    # print("User interest: ",interest_initial_state.get('state'))
     return interest_initial_state
 
 @gin.configurable
@@ -120,7 +120,7 @@ class InterestEvolutionUser(user.User):
       interest_initial_state = self._interest_generator.initial_state()
     else:
       interest_initial_state = self._interest_model.initial_state()
-      print("Without interested topics user: ", interest_initial_state.get('state'))
+      # print("Without interested topics user: ", interest_initial_state.get('state'))
       interest_initial_state = Value(
           state=tf.identity(interest_initial_state.get('state'))).union(
               interest_initial_state.prefixed_with('linear_update'))

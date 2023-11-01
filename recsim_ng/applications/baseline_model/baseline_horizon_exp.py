@@ -67,7 +67,7 @@ def main(argv):
     horizons = [100,500,1000,5000]
     Epsilon1 = [0.4,0.4,0.5,0.9]
     Epsilon2 = [0.3,0.3,0.3,0.7]
-    Epsilon3 = [0.4,0.4,0.4,0.8]
+    Epsilon3 = [0.4,0.45,0.45,0.85]
     ep_id = 0
     print("more_interested_topics = None")
     for i in horizons:
