@@ -93,6 +93,11 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             oversample_x = tf.reshape(tf.repeat(training_x[chosen_doc_idx], repeats = oversample_num, axis=0), (-1, self._doc_embed_dim))
             training_x = tf.concat([training_x, oversample_x], axis=0)
             current_slate_size = self._slate_size + oversample_num
+            #-------------------------------------------------------------------------
+            training_x = tf.reshape(training_x[chosen_doc_idx],(-1, self._doc_embed_dim))
+            training_y = tf.ones((1))
+            current_slate_size = 1
+            #-------------------------------------------------------------------------
 
         with tf.GradientTape() as tape:
             training_x_reshaped = tf.reshape(training_x, (current_slate_size, -1))
@@ -133,7 +138,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             # doc_features: (slate_size, n_features)
             available_docs.get('doc_features')).get('affinities') + 2.0
         # Choose the top-k highest smilarity docs
-        _, doc_indices = tf.math.top_k(affinities, k=self._slate_size)
+        _, doc_indices = tf.math.top_k(-affinities, k=self._slate_size)
         slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
      return slate
    
@@ -324,7 +329,7 @@ class CollabFilteringRecommender(recommender.BaseRecommender):
     self._history_length = config["history_length"]
     self._num_docs = config.get("num_docs")
     self._num_topics = config.get("num_topics")
-    self._doc_embed_dim = config.get("doc_embed_dim")
+    self._doc_embed_dim = 110#config.get("doc_embed_dim")
     self._model = model_ctor(self._num_users, self._num_docs, self._doc_embed_dim,
                              self._history_length)
     doc_history_model = estimation.FiniteHistoryStateModel(
@@ -425,7 +430,7 @@ class LinearUCBRecommender(recommender.BaseRecommender):
       super().__init__(config, name=name)
       self._num_docs = config.get("num_docs")
       self._num_topics = config.get("num_topics")
-      self._doc_embed_dim = config.get("doc_embed_dim")
+      self._doc_embed_dim = 110#config.get("doc_embed_dim")
       self._alpha = alpha
       self._epsilon = epsilon
       self._A = []
