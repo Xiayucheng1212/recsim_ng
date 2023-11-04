@@ -62,10 +62,10 @@ class UserWithInterestedTopics(object):
     all_users_interested_topics = []
     for i in range(self._num_users):
       interested_topics = np.zeros(self._num_topics, dtype=np.float32)
-      interested_topics[np.random.choice(self._num_topics, interested_topics_num, replace=False)] = 1
+      interested_topics[np.random.choice(self._num_topics, interested_topics_num, replace=False)] = 3.0
       all_users_interested_topics.append(interested_topics)
     # Set the mean value of each user's interest to be the all_users_interested_topics
-    interest_initial_state = Value(state = ed.Normal(loc=tf.convert_to_tensor(all_users_interested_topics), scale=0.5*tf.ones([self._num_users, self._num_topics])))
+    interest_initial_state = Value(state = tf.random.normal(shape=[self._num_users, self._num_topics] ,mean=tf.convert_to_tensor(all_users_interested_topics), stddev=0.5*tf.ones([self._num_users, self._num_topics])))
     # print("User interest: ",interest_initial_state.get('state'))
     return interest_initial_state
 
@@ -78,7 +78,7 @@ class InterestEvolutionUser(user.User):
       config,
       affinity_model_ctor = affinity_lib.TargetPointSimilarity,
       choice_model_ctor = selector_lib.MultinomialLogitChoiceModel,
-      no_click_mass = 0.,
+      no_click_mass = 4.0,
       # Step size for updating user interests based on consumed documents
       # (small!). We may want to have different values for different interests
       # to represent how malleable those interests are, e.g., strong dislikes
@@ -86,10 +86,12 @@ class InterestEvolutionUser(user.User):
       interest_step_size = 0.1,
       reset_users_if_timed_out = False,
       interest_update_noise_scale = None,
+      freeze_user = True,
       initial_interest_generator:UserWithInterestedTopics = None,
       max_user_affinity = 10.0):
     super().__init__(config)
     self._config = config
+    self._freeze_user = freeze_user
     self._doc_embed_dim = config['doc_embed_dim']
     self._num_topics = config['num_topics']
     self._max_user_affinity = max_user_affinity
@@ -103,6 +105,10 @@ class InterestEvolutionUser(user.User):
     else:
       interest_noise = interest_update_noise_scale * tf.ones(
           self._num_users, dtype=tf.float32)
+    if self._interest_generator is not None:
+      initial_mean_value = self._interest_generator.initial_state().get("state")
+    else :
+      initial_mean_value = tf.zeros([self._num_users, self._num_topics], dtype=tf.float32)
     interest_model = dynamic.ControlledLinearScaledGaussianStateModel(
         dim=self._num_topics,
         transition_scales=None,
@@ -110,13 +116,14 @@ class InterestEvolutionUser(user.User):
         tf.ones(self._num_users, dtype=tf.float32),
         noise_scales=interest_noise,
         # initial_dis_scales is the standard deviation of the initial distribution
-        initial_dist_scales=tf.ones(self._num_users, dtype=tf.float32))
+        initial_dist_scales=tf.ones(self._num_users, dtype=tf.float32),
+        initial_mean_value= initial_mean_value)
     self._interest_model = dynamic.NoOPOrContinueStateModel(
         interest_model, batch_ndims=1)
 
   def initial_state(self):
     """The initial state value."""
-    if self._interest_generator is not None:
+    if self._interest_generator is not None and self._freeze_user is True:
       interest_initial_state = self._interest_generator.initial_state()
     else:
       interest_initial_state = self._interest_model.initial_state()
@@ -177,7 +184,7 @@ class InterestEvolutionUser(user.User):
 
   def specs(self):
     # TODO: interest_spec only need interest + state as prefix
-    if self._interest_generator is not None:
+    if self._interest_generator is not None and self._freeze_user is True:
       interest_spec = ValueSpec(
         state = tensor_space(low=-10.0, high=10.0, shape=(self._num_users, self._num_topics))
       )

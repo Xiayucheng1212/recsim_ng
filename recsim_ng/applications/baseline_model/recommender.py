@@ -138,7 +138,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
             # doc_features: (slate_size, n_features)
             available_docs.get('doc_features')).get('affinities') + 2.0
         # Choose the top-k highest smilarity docs
-        _, doc_indices = tf.math.top_k(-affinities, k=self._slate_size)
+        _, doc_indices = tf.math.top_k(-1*affinities, k=self._slate_size)
         slate = available_docs.map(lambda field: tf.gather(field, doc_indices) if field.shape != [self._num_users, self._num_docs] else field )
      return slate
    

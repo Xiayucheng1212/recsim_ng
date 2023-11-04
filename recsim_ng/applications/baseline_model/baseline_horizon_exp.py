@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, more_interested_topics ,horizon, epsilon
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users, more_interested_topics = more_interested_topics)
+        variables = simulation_config.create_glm_contextual_simulation_network(epsilon= epsilon, num_users=num_users, more_interested_topics = more_interested_topics, freeze_user=False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -49,7 +49,7 @@ def run_simulation(num_runs, num_users, more_interested_topics ,horizon, epsilon
     ctr_mean = sum_ctr / num_runs
     return ctime_mean, ctr_mean
 
-def run_exp(horizon, more_interested_topics = False, epsilon = 0.8):
+def run_exp(horizon, more_interested_topics = False, epsilon = 0.8, f = None):
     num_runs = 3
     num_users = 3
     t_begin = time.time()
@@ -61,28 +61,41 @@ def run_exp(horizon, more_interested_topics = False, epsilon = 0.8):
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
 
+    # write to file
+    f.write('Horizon: %d\n' %horizon)
+    f.write('epsilon: %.2f\n' %epsilon)
+    f.write('Elapsed time: %.3f seconds\n' %(time.time() - t_begin))
+    f.write('Average reward: %f\n' %reward_mean)
+    f.write('Average ctr: %f\n' %avg_ctr)
+
 
 def main(argv):
     del argv
-    horizons = [100,500,1000,5000]
-    Epsilon1 = [0.4,0.4,0.5,0.9]
-    Epsilon2 = [0.3,0.3,0.3,0.7]
-    Epsilon3 = [0.4,0.45,0.45,0.85]
+    horizons = [100,300,500]
+    Epsilon1 = [0.4,0.4,0.4]
+    Epsilon2 = [0.3,0.3,0.3]
+    Epsilon3 = [0.4,0.4,0.45]
     ep_id = 0
+    # open file
+    f = open("./recsim_ng/expr_result/baseline_dynamic_exp.txt", "w")
+    f.write("more_interested_topics = None\n")
     print("more_interested_topics = None")
     for i in horizons:
-        run_exp(i,None,epsilon =Epsilon1[ep_id])
+        run_exp(i,None,epsilon =Epsilon1[ep_id], f=f)
         ep_id+=1
     ep_id = 0
+    f.write("more_interested_topics = False\n")
     print("more_interested_topics = False")
     for i in horizons:
-        run_exp(i,False,epsilon =Epsilon2[ep_id])
+        run_exp(i,False,epsilon =Epsilon2[ep_id], f=f)
         ep_id+=1
     ep_id = 0
+    f.write("more_interested_topics = True\n")
     print("more_interested_topics = True")
     for i in horizons:
-        run_exp(i,True,epsilon =Epsilon3[ep_id])
+        run_exp(i,True,epsilon =Epsilon3[ep_id], f=f)
         ep_id+=1
+    f.close()
 
 if __name__ == '__main__':
   app.run(main)

@@ -552,6 +552,7 @@ class ControlledLinearGaussianStateModel(state.StateModel):
                transition_parameters = None,
                transition_noise_scale = None,
                control_parameters = None,
+               initial_mean_value = None,
                name = 'ControlledLinearGaussianStateModel'):
     super().__init__(name=name)
     optional_args = {
@@ -566,6 +567,7 @@ class ControlledLinearGaussianStateModel(state.StateModel):
     self._transition_noise_scale_ctor = transition_noise_scale_ctor
     self._initial_dist_scale_ctor = initial_dist_scale_ctor
     self._control_op_ctor = control_op_ctor
+    self._initial_mean_value = initial_mean_value
 
   def initial_state(self, parameters = None):
     """Samples a state tensor for a batch of actors.
@@ -588,7 +590,7 @@ class ControlledLinearGaussianStateModel(state.StateModel):
         parameters.get('initial_dist_scale'))
     return Value(
         state=ed.MultivariateNormalLinearOperator(
-            loc=0.0, scale=scale_linear_op))
+            loc=self._initial_mean_value, scale=scale_linear_op))
 
   def next_state(self,
                  old_state,
@@ -667,7 +669,8 @@ class ControlledLinearScaledGaussianStateModel(
                transition_scales = None,
                control_scales = None,
                noise_scales = None,
-               initial_dist_scales = None):
+               initial_dist_scales = None,
+               initial_mean_value = None):
     """Constructs a ControlledLinearScaledGaussianStateModel.
 
     Args:
@@ -710,7 +713,8 @@ class ControlledLinearScaledGaussianStateModel(
         transition_noise_scale_ctor=noise_op_ctor,
         transition_noise_scale=noise_params,
         initial_dist_scale_ctor=i_dist_op_ctor,
-        initial_dist_scale=i_dist_params)
+        initial_dist_scale=i_dist_params,
+        initial_mean_value = initial_mean_value)
 
   def _generate_diag_transition_op(self, scale,
                                    dim):

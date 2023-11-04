@@ -23,7 +23,7 @@ def run_simulation(num_runs, num_users, more_interested_topics ,horizon):
     sum_user_ctime = 0.0
     sum_ctr = 0.0
     for _ in range(num_runs):
-        variables = simulation_config.create_random_simulation_network(num_users=num_users, more_interested_topics=more_interested_topics)
+        variables = simulation_config.create_random_simulation_network(num_users=num_users, more_interested_topics=more_interested_topics, freeze_user=False)
         glm_network = network_lib.Network(variables=variables)
         with tf.compat.v1.Session().as_default():
             # @tf.function
@@ -50,7 +50,7 @@ def run_simulation(num_runs, num_users, more_interested_topics ,horizon):
     ctr_mean = sum_ctr / num_runs
     return ctime_mean, ctr_mean
 
-def run_exp(horizon = 1000, more_interested_topics = None):
+def run_exp(horizon = 1000, more_interested_topics = None, f=None):
     num_runs = 3
     num_users = 3
     t_begin = time.time()
@@ -60,19 +60,28 @@ def run_exp(horizon = 1000, more_interested_topics = None):
     print('Average reward: %f' %reward_mean)
     print('Average ctr: %f' %avg_ctr)
 
+    f.write('Horizon: %d\n' %horizon)
+    f.write('Elapsed time: %.3f seconds\n' %(time.time() - t_begin))
+    f.write('Average reward: %f\n' %reward_mean)
+    f.write('Average ctr: %f\n' %avg_ctr)
+
 
 def main(argv):
     del argv
-    horizons = [100,500,1000,5000]
+    horizons = [100,300, 500]
+    f = open("./recsim_ng/expr_result/random_dynamic_exp.txt", "w")
+    f.write("more_interested_topics = None\n")
     print("more_interested_topics = None")
     for i in horizons:
-        run_exp(i,None)
+        run_exp(i,None, f=f)
+    f.write("more_interested_topics = False\n")
     print("more_interested_topics = False")
     for i in horizons:
-        run_exp(i,False)
+        run_exp(i,False, f=f)
+    f.write("more_interested_topics = True\n")
     print("more_interested_topics = True")
     for i in horizons:
-        run_exp(i,True)
+        run_exp(i,True, f=f)
 
 if __name__ == '__main__':
   app.run(main)
