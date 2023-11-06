@@ -65,6 +65,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
     # The slate_size here is changed to num_docs, since we need to check all affinities in the available_docs
     self._affinity_model = affinity_lib.TargetPointSimilarity((self._num_users,), self._num_docs, 'negative_cosine')
     self._iteration = 0
+    self._last_phase = 1 # 1 means exploration, 0 means exploitation
 
    def initial_state(self):
      # Initializes the training loss and accuracy
@@ -77,9 +78,10 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
    
    def next_state(self, previous_state, user_response, slate_docs):
      # Prepares training and ground_truth data
-     del previous_state
      # Upadte one step for each doc in the user_response
      # Although we only have 1 user, for the generality we still keep the for loop for num_users
+     if self._last_phase == 0: # only exploration phase can update the model
+        return previous_state
      for i in range(self._num_users):
         chosen_doc_idx = user_response.get("choice")[i]
         current_slate_size = self._slate_size
@@ -87,7 +89,7 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
         training_x = slate_docs.as_dict["doc_features"][i]
         # Add Oversampling data
         if chosen_doc_idx != self._slate_size:
-            oversample_num = int(self._slate_size/2) # half of the slate_size is clicked docs
+            oversample_num = int(self._slate_size/3) # half of the slate_size is clicked docs
             oversample_y = tf.ones((oversample_num))
             training_y = tf.concat([training_y, oversample_y], axis=0)
             oversample_x = tf.reshape(tf.repeat(training_x[chosen_doc_idx], repeats = oversample_num, axis=0), (-1, self._doc_embed_dim))
@@ -125,11 +127,13 @@ class GeneralizedLinearRecommender(recommender.BaseRecommender):
 
      explt_or_explr = random.uniform(0.0, 1.0)
      if explt_or_explr < self._epsilon: # Exploration Stage
+        self._last_phase = 1
         random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
         slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
      else: # Exploitation Stage
         # The affinity model used -tf.keras.losses.cosine_similarity to calculate similarity
         # Ranging from (-1, 1), 1 means high similarity and -1 means high dissimilarity. 
+        self._last_phase = 0
         all_trainable_weights = [self._model[i].trainable_weights[0] for i in range(self._num_users)]
         user_interest = tf.reshape(all_trainable_weights, [self._num_users, self._doc_embed_dim])
         affinities = self._affinity_model.affinities( 
@@ -436,6 +440,7 @@ class LinearUCBRecommender(recommender.BaseRecommender):
       self._A = []
       self._invA = []
       self._b = []
+      self._last_phase = 1 # 1 means exploration, 0 means exploitation
 
     def initial_state(self):
         """Parameter Initialization"""
@@ -462,7 +467,8 @@ class LinearUCBRecommender(recommender.BaseRecommender):
                 
     def next_state(self, previous_state, user_response, slate_docs):
         """The state value after the initial value."""
-        del previous_state
+        if self._last_phase == 0: # only exploration phase can update the model
+            return previous_state        
         chosen_doc_idx = user_response.get("choice").numpy()
         # chosen_doc_idx shape: (num_users, 1)
         chosen_real_id = []
@@ -507,10 +513,12 @@ class LinearUCBRecommender(recommender.BaseRecommender):
         doc_ucb_scores = []
         explt_or_explr = random.uniform(0.0, 1.0)
         if explt_or_explr < self._epsilon: # Exploration Stage
+            self._last_phase = 1
             random_indices = tf.random.uniform(shape=[self._num_users, self._slate_size], minval=0, maxval=self._num_docs-1, dtype=tf.int32)
             slate = available_docs.map(lambda field: tf.gather(field, random_indices) if field.shape != [self._num_users, self._num_docs] else field )
         else: # Exploitation Stage
             # Calculate the UCB score for each doc
+            self._last_phase = 0
             for u in range(self._num_users):
                 doc_ucb_scores_per_user = []
                 for i in range(self._num_docs):
