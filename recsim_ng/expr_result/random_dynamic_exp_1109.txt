@@ -1,0 +1,88 @@
+more_interested_topics = None
+Horizon: 100
+Elapsed time: 296.628 seconds
+Average reward: 0.477778
+Average ctr: 0.079639
+Horizon: 300
+Elapsed time: 307.866 seconds
+Average reward: 0.501852
+Average ctr: 0.082839
+Horizon: 500
+Elapsed time: 351.684 seconds
+Average reward: 0.502889
+Average ctr: 0.083793
+Horizon: 700
+Elapsed time: 383.625 seconds
+Average reward: 0.516349
+Average ctr: 0.085535
+Horizon: 900
+Elapsed time: 399.282 seconds
+Average reward: 0.504938
+Average ctr: 0.083972
+Horizon: 1100
+Elapsed time: 427.222 seconds
+Average reward: 0.501515
+Average ctr: 0.083259
+Horizon: 1300
+Elapsed time: 462.739 seconds
+Average reward: 0.506410
+Average ctr: 0.084262
+more_interested_topics = False
+Horizon: 100
+Elapsed time: 304.332 seconds
+Average reward: 0.467778
+Average ctr: 0.078130
+Horizon: 300
+Elapsed time: 352.212 seconds
+Average reward: 0.495926
+Average ctr: 0.083049
+Horizon: 500
+Elapsed time: 317.692 seconds
+Average reward: 0.490889
+Average ctr: 0.081729
+Horizon: 700
+Elapsed time: 364.522 seconds
+Average reward: 0.497619
+Average ctr: 0.083193
+Horizon: 900
+Elapsed time: 413.577 seconds
+Average reward: 0.508148
+Average ctr: 0.085071
+Horizon: 1100
+Elapsed time: 428.408 seconds
+Average reward: 0.503232
+Average ctr: 0.083949
+Horizon: 1300
+Elapsed time: 457.685 seconds
+Average reward: 0.499402
+Average ctr: 0.083254
+
+more_interested_topics = True
+Horizon: 100
+Elapsed time: 314.184 seconds
+Average reward: 0.473333
+Average ctr: 0.078404
+Horizon: 300
+Elapsed time: 331.423 seconds
+Average reward: 0.508148
+Average ctr: 0.084564
+Horizon: 500
+Elapsed time: 382.567 seconds
+Average reward: 0.512000
+Average ctr: 0.085437
+Horizon: 700
+Elapsed time: 398.151 seconds
+Average reward: 0.493810
+Average ctr: 0.081726
+Horizon: 900
+Elapsed time: 375.451 seconds
+Average reward: 0.512716
+Average ctr: 0.085491
+Horizon: 1100
+Elapsed time: 401.474 seconds
+Average reward: 0.511010
+Average ctr: 0.084828
+Horizon: 1300
+Elapsed time: 440.317 seconds
+Average reward: 0.514273
+Average ctr: 0.085210

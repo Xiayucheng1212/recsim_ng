@@ -1,0 +1,48 @@
+more_interested_topics = None
+Horizon: 100
+epsilon: 0.50
+Elapsed time: 258.732 seconds
+Average reward: 0.465556
+Average ctr: 0.072810
+Horizon: 300
+epsilon: 0.60
+Elapsed time: 320.813 seconds
+Average reward: 0.488148
+Average ctr: 0.084907
+Horizon: 500
+epsilon: 0.60
+Elapsed time: 375.576 seconds
+Average reward: 0.509333
+Average ctr: 0.085204
+more_interested_topics = False
+Horizon: 100
+epsilon: 0.40
+Elapsed time: 266.908 seconds
+Average reward: 0.490000
+Average ctr: 0.080170
+Horizon: 300
+epsilon: 0.50
+Elapsed time: 320.109 seconds
+Average reward: 0.515185
+Average ctr: 0.09050596
+Horizon: 500
+epsilon: 0.60
+Elapsed time: 369.199 seconds
+Average reward: 0.533333
+Average ctr: 0.09321341
+more_interested_topics = True
+Horizon: 100
+epsilon: 0.50
+Elapsed time: 275.971 seconds
+Average reward: 0.500000
+Average ctr: 0.080468
+Horizon: 300
+epsilon: 0.60
+Elapsed time: 321.536 seconds
+Average reward: 0.522222
+Average ctr: 0.09208588
+Horizon: 500
+epsilon: 0.7
+Elapsed time: 358.580 seconds
+Average reward: 0.524667
+Average ctr: 0.09238343

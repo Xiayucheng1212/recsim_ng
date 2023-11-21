@@ -1,4 +1,26 @@
-# RecSim NG: Toward Principled Uncertainty Modeling for Recommender Ecosystems
+# Low-Cost Recommendation System
+Our low-cost recommendation system is developed leveraging the capabilities of Recsim NG, a robust simulator capable of emulating the user interaction process, document preparation, recommendation process, and metrics for evaluating recommendation accuracy.
+
+To provide more details, our project is essentially a fork of the GitHub repository Recsim NG. Within the recsim_ng/applications/low_cost_model folder, we have implemented the new low-cost recommendation model, referred to as low_cost_model, along with other competing models such as cf_model, linucb_model, and random_model.
+
+## Results
+The metric used to evaluate the system in this study is the average recommendation success rate. For each recommendation, users have the option to select one document from a slate (a set of recommended documents). A reward of one is assigned if the user selects a document; otherwise, the reward is zero. The user setup is meticulously designed and detailed in the recsim_ng/applications/user_interest.py file—further information can be found there. Currently, the user probability for choosing one of the documents is set at 0.4.
+
+### Accuracy Results
+The accuracy of our low-cost recommendation system is competitive with other popular recommendation systems, particularly LinUCB. However, due to the limited maximum number of users (3) in the experiments, Collaborative-Filtering recommender faces challenges in learning from other users. Consequently, this explains the suboptimal performance of the cf_model.
+
+![](/docs/pics/dynamic_user_none.png)
+![](/docs/pics/dynamic_user_less.png) 
+![](/docs/pics/dynamic_user_more.png) 
+
+### Consumption Results
+It is evident that the low-cost recommender excels in both time and memory efficiency, surpassing other recommendation systems.
+
+![](/docs/pics/time_consumption.png)
+![](/docs/pics/memory_usage.png)
+
+
+##  RecSim NG: Toward Principled Uncertainty Modeling for Recommender Ecosystems
 
 RecSim NG, a probabilistic platform for multi-agent recommender systems
 simulation. RecSimNG is a scalable, modular, differentiable simulator
@@ -15,19 +37,6 @@ algorithms for recommender systems. Please refer to
 [Mladenov et al](https://arxiv.org/abs/2103.08057) for the
 high-level design of RecSim NG. Please cite the paper if you use the code from
 this repository in your work.
-
-### Bibtex
-
-```
-@article{mladenov2021recsimng,
-    title = {RecSim {NG}: Toward Principled Uncertainty Modeling for Recommender Ecosystems},
-    author = {Martin Mladenov, Chih-Wei Hsu, Vihan Jain, Eugene Ie, Christopher Colby, Nicolas Mayoraz, Hubert Pham, Dustin Tran, Ivan Vendrov, Craig Boutilier}
-    year = {2021},
-    eprint={2103.08057},
-    archivePrefix={arXiv},
-    primaryClass={cs.LG}
-}
-```
 
 <a id='Disclaimer'></a>
 

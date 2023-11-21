@@ -1,0 +1,111 @@
+// User interest * 0.8
+more_interested_topics = None
+Horizon: 100
+epsilon: 0.40
+Elapsed time: 260.588 seconds
+Average reward: 0.465556
+Average ctr: 0.091963
+Horizon: 300
+epsilon: 0.40
+Elapsed time: 328.191 seconds
+Average reward: 0.491111
+Average ctr: 0.088400
+Horizon: 500
+epsilon: 0.40
+Elapsed time: 404.571 seconds
+Average reward: 0.503333
+Average ctr: 0.089597
+Horizon: 700
+epsilon: 0.50
+Elapsed time: 444.842 seconds
+Average reward: 0.508413
+Average ctr: 0.088224
+Horizon: 900
+epsilon: 0.50
+Elapsed time: 506.991 seconds
+Average reward: 0.492963
+Average ctr: 0.086467
+Horizon: 1100
+epsilon: 0.50
+Elapsed time: 574.262 seconds
+Average reward: 0.489697
+Average ctr: 0.086851
+Horizon: 1300
+epsilon: 0.60
+Elapsed time: 607.202 seconds
+Average reward: 0.499060
+Average ctr: 0.085764
+
+more_interested_topics = False
+Horizon: 100
+epsilon: 0.30
+Elapsed time: 267.373 seconds
+Average reward: 0.505556
+Average ctr: 0.102542
+Horizon: 300
+epsilon: 0.30
+Elapsed time: 341.632 seconds
+Average reward: 0.503704
+Average ctr: 0.091001
+Horizon: 500
+epsilon: 0.30
+Elapsed time: 411.499 seconds
+Average reward: 0.509778
+Average ctr: 0.093324
+Horizon: 700
+epsilon: 0.30
+Elapsed time: 483.491 seconds
+Average reward: 0.499683
+Average ctr: 0.089541
+Horizon: 900
+epsilon: 0.40
+Elapsed time: 533.263 seconds
+Average reward: 0.494074
+Average ctr: 0.087141
+Horizon: 1100
+epsilon: 0.40
+Elapsed time: 599.305 seconds
+Average reward: 0.494747
+Average ctr: 0.087800
+Horizon: 1300
+epsilon: 0.50
+Elapsed time: 634.161 seconds
+Average reward: 0.505983
+Average ctr: 0.088742
+
+more_interested_topics = True
+Horizon: 100
+epsilon: 0.45
+Elapsed time: 264.192 seconds
+Average reward: 0.482222
+Average ctr: 0.094875
+Horizon: 300
+epsilon: 0.45
+Elapsed time: 329.378 seconds
+Average reward: 0.484074
+Average ctr: 0.093646
+Horizon: 500
+epsilon: 0.45
+Elapsed time: 394.472 seconds
+Average reward: 0.491333
+Average ctr: 0.092117
+Horizon: 700
+epsilon: 0.45
+Elapsed time: 457.294 seconds
+Average reward: 0.494603
+Average ctr: 0.089015
+Horizon: 900
+epsilon: 0.45
+Elapsed time: 508.032 seconds
+Average reward: 0.512222
+Average ctr: 0.091682
+Horizon: 1100
+epsilon: 0.50
+Elapsed time: 567.507 seconds
+Average reward: 0.518889
+Average ctr: 0.090182
+Horizon: 1300
+epsilon: 0.50
+Elapsed time: 598.870 seconds
+Average reward: 0.516923
+Average ctr: 0.090005
